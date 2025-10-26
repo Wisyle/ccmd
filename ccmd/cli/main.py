@@ -24,6 +24,8 @@ def main():
     # Management flags
     parser.add_argument('--install', action='store_true',
                        help='Install CCMD and add commands to shell')
+    parser.add_argument('--uninstall', action='store_true',
+                       help='Uninstall CCMD and remove shell integration')
     parser.add_argument('--restore', action='store_true',
                        help='Restore shell configuration from backup')
     parser.add_argument('--check', action='store_true',
@@ -48,6 +50,8 @@ def main():
     # Handle management flags
     if args.install:
         return handle_install()
+    elif args.uninstall:
+        return handle_uninstall()
     elif args.restore:
         return handle_restore()
     elif args.check:
@@ -80,6 +84,22 @@ def handle_install():
 
     if success:
         CommandOutput.print_success(message)
+        return 0
+    else:
+        CommandOutput.print_error(message)
+        return 1
+
+
+def handle_uninstall():
+    """Handle uninstallation"""
+    from ccmd.cli.install import uninstall_ccmd
+
+    CommandOutput.print_info("Uninstalling CCMD...")
+    success, message = uninstall_ccmd()
+
+    if success:
+        CommandOutput.print_success(message)
+        CommandOutput.print_info("Please restart your shell or run: source ~/.bashrc (or ~/.zshrc)")
         return 0
     else:
         CommandOutput.print_error(message)

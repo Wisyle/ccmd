@@ -117,7 +117,7 @@ If you're not familiar with Git, download the official release:
 1. **Download the latest release:**
    - Visit: https://github.com/Wisyle/ccmd/releases/latest
    - Download **Source code (zip)** under Assets
-   - Or direct download: https://github.com/Wisyle/ccmd/archive/refs/tags/v1.0.2.zip
+   - Or direct download: https://github.com/Wisyle/ccmd/archive/refs/tags/v1.0.3.zip
 
 2. **Extract the files:**
    - Extract the downloaded ZIP file

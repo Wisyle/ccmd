@@ -104,13 +104,33 @@ def generate_bash_integration(install_dir: Path, run_py: Path, commands: list) -
     code = "# CCMD Integration - Start\n"
     code += f"export CCMD_HOME=\"{install_dir}\"\n\n"
 
+    # Add error flag to show message only once
+    code += "export _CCMD_ERROR_SHOWN=0\n\n"
+
+    # Helper function to check CCMD availability
+    code += """_ccmd_check() {
+    if [ ! -f "$CCMD_HOME/run.py" ]; then
+        if [ "$_CCMD_ERROR_SHOWN" -eq 0 ]; then
+            echo "⚠ CCMD not found at $CCMD_HOME"
+            echo "→ Please reinstall CCMD or run: python3 /path/to/ccmd/run.py --uninstall"
+            echo "→ To silence this message, remove CCMD integration from your shell config"
+            export _CCMD_ERROR_SHOWN=1
+        fi
+        return 1
+    fi
+    return 0
+}
+
+"""
+
     # Create function for each command
     for cmd in commands:
         # For navigation commands (cd), we need special handling
-        code += f"""
-{cmd}() {{
+        code += f"""{cmd}() {{
+    _ccmd_check || return 1
+
     local output
-    output=$("{python_exec}" "{run_py}" {cmd} "$@")
+    output=$("{python_exec}" "$CCMD_HOME/run.py" {cmd} "$@")
     local exit_code=$?
 
     # Check if output is a cd command
@@ -122,9 +142,10 @@ def generate_bash_integration(install_dir: Path, run_py: Path, commands: list) -
 
     return $exit_code
 }}
+
 """
 
-    code += "\n# CCMD Integration - End\n"
+    code += "# CCMD Integration - End\n"
     return code
 
 
@@ -133,12 +154,30 @@ def generate_fish_integration(install_dir: Path, run_py: Path, commands: list) -
     python_exec = sys.executable
 
     code = "# CCMD Integration - Start\n"
-    code += f"set -gx CCMD_HOME \"{install_dir}\"\n\n"
+    code += f"set -gx CCMD_HOME \"{install_dir}\"\n"
+    code += "set -gx _CCMD_ERROR_SHOWN 0\n\n"
+
+    # Helper function to check CCMD availability
+    code += """function _ccmd_check
+    if not test -f "$CCMD_HOME/run.py"
+        if test "$_CCMD_ERROR_SHOWN" -eq 0
+            echo "⚠ CCMD not found at $CCMD_HOME"
+            echo "→ Please reinstall CCMD or run: python3 /path/to/ccmd/run.py --uninstall"
+            echo "→ To silence this message, remove CCMD integration from your shell config"
+            set -gx _CCMD_ERROR_SHOWN 1
+        end
+        return 1
+    end
+    return 0
+end
+
+"""
 
     for cmd in commands:
-        code += f"""
-function {cmd}
-    set output ({python_exec} "{run_py}" {cmd} $argv)
+        code += f"""function {cmd}
+    _ccmd_check; or return 1
+
+    set output ({python_exec} "$CCMD_HOME/run.py" {cmd} $argv)
 
     if string match -q -r '^cd ' "$output"
         eval "$output"
@@ -146,9 +185,10 @@ function {cmd}
         echo "$output"
     end
 end
+
 """
 
-    code += "\n# CCMD Integration - End\n"
+    code += "# CCMD Integration - End\n"
     return code
 
 
@@ -157,12 +197,30 @@ def generate_powershell_integration(install_dir: Path, run_py: Path, commands: l
     python_exec = sys.executable
 
     code = "# CCMD Integration - Start\n"
-    code += f"$env:CCMD_HOME = \"{install_dir}\"\n\n"
+    code += f"$env:CCMD_HOME = \"{install_dir}\"\n"
+    code += "$global:_CCMD_ERROR_SHOWN = 0\n\n"
+
+    # Helper function to check CCMD availability
+    code += """function _ccmd_check {
+    if (-not (Test-Path "$env:CCMD_HOME/run.py")) {
+        if ($global:_CCMD_ERROR_SHOWN -eq 0) {
+            Write-Host "⚠ CCMD not found at $env:CCMD_HOME" -ForegroundColor Yellow
+            Write-Host "→ Please reinstall CCMD or run: python3 /path/to/ccmd/run.py --uninstall"
+            Write-Host "→ To silence this message, remove CCMD integration from your PowerShell profile"
+            $global:_CCMD_ERROR_SHOWN = 1
+        }
+        return $false
+    }
+    return $true
+}
+
+"""
 
     for cmd in commands:
-        code += f"""
-function {cmd} {{
-    $output = & "{python_exec}" "{run_py}" {cmd} $args
+        code += f"""function {cmd} {{
+    if (-not (_ccmd_check)) {{ return }}
+
+    $output = & "{python_exec}" "$env:CCMD_HOME/run.py" {cmd} $args
 
     if ($output -match '^cd ') {{
         Invoke-Expression $output
@@ -170,9 +228,10 @@ function {cmd} {{
         Write-Output $output
     }}
 }}
+
 """
 
-    code += "\n# CCMD Integration - End\n"
+    code += "# CCMD Integration - End\n"
     return code
 
 

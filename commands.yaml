@@ -57,3 +57,8 @@ commands:
     description: Restore shell configuration from backup
     action: python3 $CCMD_HOME/run.py --restore
     type: internal
+
+  uninstall:
+    description: Uninstall CCMD and remove shell integration
+    action: python3 $CCMD_HOME/run.py --uninstall
+    type: internal
