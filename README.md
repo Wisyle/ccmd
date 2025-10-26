@@ -84,28 +84,97 @@ ccmd/
 
 ### Prerequisites
 
-* Python **3.9+**
-* Git
+* Python **3.7+**
 
-### Quick Install
+### Method 1: Using Git (Recommended)
+
+For users comfortable with Git:
 
 ```bash
-git clone https://github.com/Wisyle/ccmd.git
+# Clone the repository (ccmd branch)
+git clone -b ccmd https://github.com/Wisyle/ccmd.git
 cd ccmd
-python run.py --install
+
+# Run the installer for your platform
+# Linux/macOS/WSL:
+bash setup.sh
+
+# Windows PowerShell:
+.\setup.ps1
+
+# Reload your shell
+source ~/.bashrc  # or ~/.zshrc for Zsh, or restart terminal
+```
+
+### Method 2: Download ZIP (For non-Git users)
+
+If you're not familiar with Git, follow these simple steps:
+
+1. **Download the code:**
+   - Visit: https://github.com/Wisyle/ccmd/tree/ccmd
+   - Click the green **"Code"** button
+   - Select **"Download ZIP"**
+
+2. **Extract the files:**
+   - Extract the downloaded ZIP file
+   - Rename the folder to `ccmd` (remove any `-ccmd` suffix)
+
+3. **Install CCMD:**
+
+   **On Linux/macOS/WSL:**
+   ```bash
+   cd /path/to/ccmd
+   bash setup.sh
+   source ~/.bashrc  # or ~/.zshrc
+   ```
+
+   **On Windows PowerShell:**
+   ```powershell
+   cd C:\path\to\ccmd
+   .\setup.ps1
+   . $PROFILE
+   ```
+
+4. **Test installation:**
+   ```bash
+   python3 run.py --check
+   go home
+   ```
+
+### Verify Installation
+
+After installation, test that CCMD is working:
+
+```bash
+# Check system status
+python3 run.py --check
+
+# List available commands
+python3 run.py --list
+
+# Test a command
+go home
 ```
 
 ### Uninstall / Rollback
 
 ```bash
-python run.py --restore
+python3 run.py --restore
 ```
 
-### Update
+### Update CCMD
 
+**If installed via Git:**
 ```bash
-python run.py --update
+cd /path/to/ccmd
+git pull origin ccmd
+python3 run.py --install
 ```
+
+**If installed via ZIP:**
+- Download the latest ZIP
+- Extract and replace your existing ccmd folder
+- Run the installer again (`bash setup.sh` or `.\setup.ps1`)
 
 ---
 
