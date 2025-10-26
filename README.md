@@ -1,5 +1,9 @@
 # 🧠 CCMD — Custom Command Manager
 
+[![Latest Release](https://img.shields.io/github/v/release/Wisyle/ccmd?label=Download&color=brightgreen)](https://github.com/Wisyle/ccmd/releases/latest)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+
 > **Cross-platform command enhancer for humans.**
 > Replace long, repetitive terminal syntax with short, intuitive commands.
 > Works on **Linux**, **macOS**, **Windows**, **PowerShell**, and **WSL** — safe, rollback-ready, and open source.
@@ -108,16 +112,16 @@ source ~/.bashrc  # or ~/.zshrc for Zsh, or restart terminal
 
 ### Method 2: Download ZIP (For non-Git users)
 
-If you're not familiar with Git, follow these simple steps:
+If you're not familiar with Git, download the official release:
 
-1. **Download the code:**
-   - Visit: https://github.com/Wisyle/ccmd/tree/ccmd
-   - Click the green **"Code"** button
-   - Select **"Download ZIP"**
+1. **Download the latest release:**
+   - Visit: https://github.com/Wisyle/ccmd/releases/latest
+   - Download **Source code (zip)** under Assets
+   - Or direct download: https://github.com/Wisyle/ccmd/archive/refs/tags/v1.0.0.zip
 
 2. **Extract the files:**
    - Extract the downloaded ZIP file
-   - Rename the folder to `ccmd` (remove any `-ccmd` suffix)
+   - Rename the folder to `ccmd` (remove any version suffix)
 
 3. **Install CCMD:**
 
