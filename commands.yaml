@@ -49,8 +49,8 @@ commands:
     prompt: Enter process ID
 
   update:
-    description: Update CCMD commands from config
-    action: python3 $CCMD_HOME/run.py --install
+    description: Update CCMD to latest version from GitHub
+    action: python3 $CCMD_HOME/run.py --update
     type: internal
 
   restore:
@@ -61,4 +61,14 @@ commands:
   uninstall:
     description: Uninstall CCMD and remove shell integration
     action: python3 $CCMD_HOME/run.py --uninstall
+    type: internal
+
+  hi:
+    description: Show personalized dashboard with system overview
+    action: python3 $CCMD_HOME/run.py hi
+    type: internal
+
+  list:
+    description: List all available CCMD commands
+    action: python3 $CCMD_HOME/run.py --list
     type: internal

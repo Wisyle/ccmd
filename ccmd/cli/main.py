@@ -259,6 +259,8 @@ def main():
                        help='Reload commands from configuration')
     parser.add_argument('--list', action='store_true',
                        help='List all available commands')
+    parser.add_argument('--update', action='store_true',
+                       help='Update CCMD to latest version from GitHub')
     parser.add_argument('--debug', action='store_true',
                        help='Enable debug mode with verbose output')
     parser.add_argument('--exec', type=str,
@@ -277,7 +279,7 @@ def main():
     # Handle debug mode if no other command
     if args.debug and not any([args.install, args.uninstall, args.restore,
                                 args.check, args.edit, args.test, args.reload,
-                                args.list, args.exec, args.command]):
+                                args.list, args.update, args.exec, args.command]):
         return handle_debug()
 
     # Handle management flags
@@ -285,6 +287,8 @@ def main():
         return handle_install()
     elif args.uninstall:
         return handle_uninstall()
+    elif args.update:
+        return handle_update()
     elif args.restore:
         return handle_restore()
     elif args.check:
@@ -336,6 +340,108 @@ def handle_uninstall():
         return 0
     else:
         CommandOutput.print_error(message)
+        return 1
+
+
+def handle_update():
+    """Handle update from GitHub"""
+    import json
+    import urllib.request
+    import tarfile
+    import shutil
+    import tempfile
+    from ccmd.cli.install import install_ccmd
+
+    CommandOutput.print_info("Checking for latest CCMD version on GitHub...")
+
+    try:
+        # Get latest release info from GitHub API
+        api_url = "https://api.github.com/repos/Wisyle/ccmd/releases/latest"
+        with urllib.request.urlopen(api_url) as response:
+            release_data = json.loads(response.read().decode())
+
+        latest_version = release_data['tag_name']
+        tarball_url = release_data['tarball_url']
+
+        # Check current version
+        try:
+            from ccmd import __version__
+            current_version = f"v{__version__}"
+        except:
+            current_version = "unknown"
+
+        CommandOutput.print_info(f"Current version: {current_version}")
+        CommandOutput.print_info(f"Latest version: {latest_version}")
+
+        if current_version == latest_version:
+            CommandOutput.print_success("You are already on the latest version!")
+            return 0
+
+        CommandOutput.print_info(f"Downloading CCMD {latest_version}...")
+
+        # Download tarball to temp file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.tar.gz') as tmp_file:
+            with urllib.request.urlopen(tarball_url) as response:
+                tmp_file.write(response.read())
+            tarball_path = tmp_file.name
+
+        # Extract to temp directory
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            CommandOutput.print_info("Extracting files...")
+            with tarfile.open(tarball_path, 'r:gz') as tar:
+                tar.extractall(tmp_dir)
+
+            # Find extracted directory (GitHub tarballs have a single root directory)
+            extracted_dirs = [d for d in Path(tmp_dir).iterdir() if d.is_dir()]
+            if not extracted_dirs:
+                CommandOutput.print_error("Failed to extract release")
+                return 1
+
+            source_dir = extracted_dirs[0]
+
+            # Get CCMD_HOME
+            ccmd_home = os.environ.get('CCMD_HOME')
+            if not ccmd_home:
+                CommandOutput.print_error("CCMD_HOME not set")
+                return 1
+
+            dest_dir = Path(ccmd_home)
+
+            CommandOutput.print_info(f"Installing to {dest_dir}...")
+
+            # Copy files (excluding .git, .github, etc.)
+            for item in source_dir.iterdir():
+                if item.name.startswith('.'):
+                    continue
+
+                dest_item = dest_dir / item.name
+                if item.is_dir():
+                    if dest_item.exists():
+                        shutil.rmtree(dest_item)
+                    shutil.copytree(item, dest_item)
+                else:
+                    shutil.copy2(item, dest_item)
+
+        # Clean up tarball
+        os.unlink(tarball_path)
+
+        # Reinstall shell integration
+        CommandOutput.print_info("Updating shell integration...")
+        success, message = install_ccmd()
+
+        if success:
+            CommandOutput.print_success(f"Successfully updated to CCMD {latest_version}!")
+            CommandOutput.print_info("Please restart your shell or run: source ~/.bashrc (or ~/.zshrc)")
+            return 0
+        else:
+            CommandOutput.print_error(f"Update succeeded but shell integration failed: {message}")
+            return 1
+
+    except urllib.error.URLError as e:
+        CommandOutput.print_error(f"Failed to connect to GitHub: {e}")
+        return 1
+    except Exception as e:
+        CommandOutput.print_error(f"Update failed: {e}")
         return 1
 
 
@@ -624,15 +730,15 @@ def handle_command(command_name: str, args: list):
         dir_name = parameters['search_dir']
         debug_print(f"Searching for directory: {dir_name}")
 
-        # Show searching feedback
-        show_command_feedback('go', f"Searching for '{dir_name}'", Colors.GREEN)
+        # Show searching feedback to stderr
+        print(f"{Colors.GREEN}→ Searching for '{dir_name}'...{Colors.END}", file=sys.stderr)
 
         found_path = search_directory(dir_name)
 
         if found_path:
             debug_print(f"Directory found at: {found_path}")
-            # Show going feedback with colored path
-            print(f"{Colors.GREEN}→ Going to {Colors.BLUE}{found_path}{Colors.END}")
+            # Show going feedback with colored path to stderr
+            print(f"{Colors.GREEN}→ Going to {Colors.BLUE}{found_path}{Colors.END}", file=sys.stderr)
             print(f"cd {found_path}")
             return 0
         else:
@@ -677,8 +783,8 @@ def handle_command(command_name: str, args: list):
 
         # Extract the path from cd command
         path = formatted_action[3:].strip()
-        # Show colorful feedback for predefined shortcuts
-        print(f"{Colors.GREEN}→ Going to {Colors.BLUE}{path}{Colors.END}")
+        # Show colorful feedback for predefined shortcuts to stderr
+        print(f"{Colors.GREEN}→ Going to {Colors.BLUE}{path}{Colors.END}", file=sys.stderr)
         print(formatted_action)
         return 0
 
