@@ -53,7 +53,11 @@ class CommandParser:
                     parameters = self._parse_parameters(args[2:], command_def)
                 else:
                     # Not a valid subcommand
-                    parameters = {'error': f"Unknown subcommand: {potential_subcommand}"}
+                    # For 'go' command, allow search instead of error
+                    if command_name == 'go':
+                        parameters = {'search_dir': potential_subcommand}
+                    else:
+                        parameters = {'error': f"Unknown subcommand: {potential_subcommand}"}
             else:
                 # Single action command, remaining args are parameters
                 parameters = self._parse_parameters(args[1:], command_def)

@@ -1,6 +1,6 @@
 commands:
   go:
-    description: Navigate to common directories
+    description: Navigate to common directories (with smart search)
     action:
       downloads: cd ~/Downloads
       documents: cd ~/Documents
