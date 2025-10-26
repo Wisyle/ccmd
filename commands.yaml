@@ -6,6 +6,7 @@ commands:
       documents: cd ~/Documents
       desktop: cd ~/Desktop
       home: cd ~
+      ccmd: cd $CCMD_HOME
     type: navigation
 
   push:
@@ -49,10 +50,10 @@ commands:
 
   update:
     description: Update CCMD commands from config
-    action: python3 ~/.ccmd/run.py --install
+    action: python3 $CCMD_HOME/run.py --install
     type: internal
 
   restore:
     description: Restore shell configuration from backup
-    action: python3 ~/.ccmd/run.py --restore
+    action: python3 $CCMD_HOME/run.py --restore
     type: internal
