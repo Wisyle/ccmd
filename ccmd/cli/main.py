@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+import os
 from pathlib import Path
 
 # Add parent directory to path for imports
@@ -12,6 +13,15 @@ from ccmd.core.registry import CommandRegistry
 from ccmd.core.parser import CommandParser
 from ccmd.core.executor import CommandExecutor, CommandOutput, prompt_user
 from ccmd.core.rollback import BackupManager, RollbackManager
+
+# Global debug mode flag
+DEBUG_MODE = False
+
+
+def debug_print(message):
+    """Print debug messages when debug mode is enabled"""
+    if DEBUG_MODE:
+        print(f"[DEBUG] {message}", file=sys.stderr)
 
 
 def main():
@@ -38,6 +48,8 @@ def main():
                        help='Reload commands from configuration')
     parser.add_argument('--list', action='store_true',
                        help='List all available commands')
+    parser.add_argument('--debug', action='store_true',
+                       help='Enable debug mode with verbose output')
     parser.add_argument('--exec', type=str,
                        help='Execute a raw command (internal use)')
 
@@ -46,6 +58,16 @@ def main():
     parser.add_argument('args', nargs='*', help='Command arguments')
 
     args = parser.parse_args()
+
+    # Set global debug mode
+    global DEBUG_MODE
+    DEBUG_MODE = args.debug
+
+    # Handle debug mode if no other command
+    if args.debug and not any([args.install, args.uninstall, args.restore,
+                                args.check, args.edit, args.test, args.reload,
+                                args.list, args.exec, args.command]):
+        return handle_debug()
 
     # Handle management flags
     if args.install:
@@ -214,6 +236,58 @@ def handle_list():
     return 0
 
 
+def handle_debug():
+    """Display debug information"""
+    print("\n" + "="*60)
+    print("CCMD Debug Information")
+    print("="*60)
+
+    # System info
+    system_info = get_system_info()
+    print(f"\n[System]")
+    print(f"  OS: {system_info.os_type}")
+    print(f"  Shell: {system_info.shell_type}")
+    print(f"  RC File: {system_info.shell_rc_file}")
+    print(f"  WSL: {system_info.is_wsl}")
+
+    # Environment
+    print(f"\n[Environment]")
+    ccmd_home = os.environ.get('CCMD_HOME', 'Not set')
+    print(f"  CCMD_HOME: {ccmd_home}")
+    print(f"  PATH: {os.environ.get('PATH', 'Not set')[:100]}...")
+    print(f"  Python: {sys.executable}")
+    print(f"  Python Version: {sys.version.split()[0]}")
+
+    # Installation
+    print(f"\n[Installation]")
+    install_dir = Path(__file__).parent.parent.parent.resolve()
+    print(f"  Install Directory: {install_dir}")
+    print(f"  run.py exists: {(install_dir / 'run.py').exists()}")
+    print(f"  commands.yaml exists: {(install_dir / 'commands.yaml').exists()}")
+
+    # Registry
+    print(f"\n[Command Registry]")
+    try:
+        registry = CommandRegistry()
+        commands = registry.list_commands()
+        print(f"  Config Path: {registry.config_path}")
+        print(f"  Commands Loaded: {len(commands)}")
+        print(f"  Commands: {', '.join(sorted(commands))}")
+    except Exception as e:
+        print(f"  Error: {e}")
+
+    # Version
+    print(f"\n[Version]")
+    try:
+        from ccmd import __version__
+        print(f"  CCMD Version: {__version__}")
+    except:
+        print(f"  CCMD Version: Unknown")
+
+    print("\n" + "="*60)
+    return 0
+
+
 def handle_exec(command: str):
     """Execute a raw command"""
     system_info = get_system_info()
@@ -227,14 +301,21 @@ def handle_exec(command: str):
 
 def handle_command(command_name: str, args: list):
     """Handle command execution"""
+    debug_print(f"Executing command: {command_name} with args: {args}")
+
     # Initialize components
     system_info = get_system_info()
+    debug_print(f"System: {system_info.os_type}, Shell: {system_info.shell_type}")
+
     registry = CommandRegistry()
+    debug_print(f"Registry loaded from: {registry.config_path}")
+
     parser = CommandParser(registry)
     executor = CommandExecutor(system_info)
 
     # Parse command
     cmd_name, subcommand, parameters = parser.parse([command_name] + args)
+    debug_print(f"Parsed - Command: {cmd_name}, Subcommand: {subcommand}, Parameters: {parameters}")
 
     if 'error' in parameters:
         CommandOutput.print_error(parameters['error'])
@@ -243,6 +324,7 @@ def handle_command(command_name: str, args: list):
     # Check if command needs prompt
     if parameters.get('needs_prompt'):
         prompt_text = parameters.get('prompt', 'Enter value')
+        debug_print(f"Prompting user: {prompt_text}")
         user_input = prompt_user(prompt_text)
         if not user_input:
             CommandOutput.print_error("No input provided")
@@ -259,22 +341,29 @@ def handle_command(command_name: str, args: list):
 
     # Get action
     action = parser.get_action(cmd_name, subcommand, system_info.os_type)
+    debug_print(f"Action template: {action}")
+
     if not action:
         CommandOutput.print_error(f"No action defined for command: {cmd_name}")
         return 1
 
     # Format action with parameters
     formatted_action = parser.format_action(action, parameters)
+    debug_print(f"Formatted action: {formatted_action}")
 
     # Check if it's a navigation command (cd)
     if formatted_action.startswith('cd '):
         # For cd commands, we need to output the command for shell evaluation
         # The actual directory change must happen in the calling shell
+        debug_print("Navigation command detected, outputting for shell evaluation")
         print(formatted_action)
         return 0
 
     # Execute command
+    debug_print("Executing command...")
     returncode, stdout, stderr = executor.execute(formatted_action)
+    debug_print(f"Return code: {returncode}")
+
     CommandOutput.print_command_output(stdout, stderr)
 
     return returncode
