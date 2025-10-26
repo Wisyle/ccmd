@@ -49,10 +49,10 @@ commands:
 
   update:
     description: Update CCMD commands from config
-    action: ccmd --reload
+    action: python3 ~/.ccmd/run.py --install
     type: internal
 
   restore:
     description: Restore shell configuration from backup
-    action: ccmd --restore
+    action: python3 ~/.ccmd/run.py --restore
     type: internal
