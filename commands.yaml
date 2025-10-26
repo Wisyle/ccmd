@@ -13,7 +13,7 @@ commands:
     description: Git add, commit, and push
     action: git add . && git commit -m "{message}" && git push
     type: git
-    prompt: Enter commit message
+    interactive: true
 
   cpu:
     description: Show CPU usage
@@ -71,4 +71,27 @@ commands:
   list:
     description: List all available CCMD commands
     action: python3 $CCMD_HOME/run.py --list
+    type: internal
+    interactive: true
+
+  version:
+    description: Show current and latest CCMD version
+    action: python3 $CCMD_HOME/run.py --version
+    type: internal
+
+  add:
+    description: Add a custom command
+    action: python3 $CCMD_HOME/run.py add
+    type: internal
+    interactive: true
+
+  remove:
+    description: Remove a custom command
+    action: python3 $CCMD_HOME/run.py remove
+    type: internal
+    interactive: true
+
+  reload:
+    description: Reload CCMD configuration and update shell integration
+    action: python3 $CCMD_HOME/run.py --reload
     type: internal

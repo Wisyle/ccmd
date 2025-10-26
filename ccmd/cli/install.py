@@ -5,6 +5,16 @@ import os
 from pathlib import Path
 from typing import Tuple
 
+# Fix Windows console encoding for Unicode support
+if sys.platform == 'win32':
+    try:
+        # Try to set console to UTF-8 mode (Windows 10+)
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        kernel32.SetConsoleOutputCP(65001)  # UTF-8
+    except:
+        pass  # Ignore if fails
+
 from ccmd.core.system_check import get_system_info
 from ccmd.core.registry import CommandRegistry, create_default_config
 from ccmd.core.rollback import RollbackManager
@@ -17,6 +27,8 @@ def install_ccmd() -> Tuple[bool, str]:
     Returns:
         Tuple of (success, message)
     """
+    import subprocess
+
     system_info = get_system_info()
     rollback = RollbackManager()
 
@@ -26,6 +38,21 @@ def install_ccmd() -> Tuple[bool, str]:
 
     if not run_py.exists():
         return False, f"run.py not found at {run_py}"
+
+    # Install Python dependencies from requirements.txt
+    requirements_file = install_dir / "requirements.txt"
+    if requirements_file.exists():
+        print("→ Installing Python dependencies...")
+        try:
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "-q", "-r", str(requirements_file)],
+                check=True,
+                capture_output=True
+            )
+            print("✓ Dependencies installed successfully")
+        except subprocess.CalledProcessError as e:
+            print(f"⚠ Warning: Failed to install dependencies: {e}")
+            print("  You may need to run: pip install -r requirements.txt")
 
     # Create default commands.yaml if it doesn't exist
     commands_yaml = install_dir / "commands.yaml"
@@ -42,6 +69,20 @@ def install_ccmd() -> Tuple[bool, str]:
     if not commands:
         return False, "No commands found in commands.yaml"
 
+    # Load disabled commands
+    disabled_config_path = install_dir / ".disabled_commands"
+    disabled_commands = set()
+
+    if disabled_config_path.exists():
+        with open(disabled_config_path, 'r') as f:
+            disabled_commands = set(line.strip() for line in f if line.strip())
+
+    # Filter out disabled commands
+    commands = [cmd for cmd in commands if cmd not in disabled_commands]
+
+    if not commands:
+        return False, "All commands are disabled"
+
     # Get shell RC file
     rc_file = system_info.shell_rc_file
     if not rc_file:
@@ -49,11 +90,11 @@ def install_ccmd() -> Tuple[bool, str]:
 
     # Generate shell integration code
     if system_info.shell_type in ['bash', 'zsh']:
-        integration_code = generate_bash_integration(install_dir, run_py, commands)
+        integration_code = generate_bash_integration(install_dir, run_py, commands, registry)
     elif system_info.shell_type == 'fish':
         integration_code = generate_fish_integration(install_dir, run_py, commands)
     elif system_info.shell_type == 'powershell':
-        integration_code = generate_powershell_integration(install_dir, run_py, commands)
+        integration_code = generate_powershell_integration(install_dir, run_py, commands, registry)
     else:
         return False, f"Unsupported shell: {system_info.shell_type}"
 
@@ -92,12 +133,20 @@ def install_ccmd() -> Tuple[bool, str]:
     )
 
     if success:
-        return True, f"CCMD installed successfully! Restart your shell or run: source {rc_file}"
+        # Platform-specific reload instructions
+        if system_info.shell_type == 'powershell':
+            reload_cmd = ". $PROFILE"
+        elif system_info.shell_type == 'fish':
+            reload_cmd = f"source {rc_file}"
+        else:  # bash/zsh
+            reload_cmd = f"source {rc_file}"
+
+        return True, f"CCMD installed successfully! Restart your shell or run: {reload_cmd}"
     else:
         return False, message
 
 
-def generate_bash_integration(install_dir: Path, run_py: Path, commands: list) -> str:
+def generate_bash_integration(install_dir: Path, run_py: Path, commands: list, registry) -> str:
     """Generate Bash/Zsh integration code"""
     python_exec = sys.executable
 
@@ -125,8 +174,22 @@ def generate_bash_integration(install_dir: Path, run_py: Path, commands: list) -
 
     # Create function for each command
     for cmd in commands:
-        # For navigation commands (cd), we need special handling
-        code += f"""{cmd}() {{
+        # Check if command is interactive
+        cmd_def = registry.get_command(cmd)
+        is_interactive = cmd_def.get('interactive', False)
+
+        if is_interactive:
+            # Interactive commands: run directly without output capture
+            code += f"""{cmd}() {{
+    _ccmd_check || return 1
+    "{python_exec}" "$CCMD_HOME/run.py" {cmd} "$@"
+    return $?
+}}
+
+"""
+        else:
+            # Non-interactive commands: capture output for cd handling
+            code += f"""{cmd}() {{
     _ccmd_check || return 1
 
     local output
@@ -192,7 +255,7 @@ end
     return code
 
 
-def generate_powershell_integration(install_dir: Path, run_py: Path, commands: list) -> str:
+def generate_powershell_integration(install_dir: Path, run_py: Path, commands: list, registry) -> str:
     """Generate PowerShell integration code"""
     python_exec = sys.executable
 
@@ -216,8 +279,23 @@ def generate_powershell_integration(install_dir: Path, run_py: Path, commands: l
 
 """
 
+    # Create function for each command
     for cmd in commands:
-        code += f"""function {cmd} {{
+        # Check if command is interactive
+        cmd_def = registry.get_command(cmd)
+        is_interactive = cmd_def.get('interactive', False)
+
+        if is_interactive:
+            # Interactive commands: run directly without output capture
+            code += f"""function {cmd} {{
+    if (-not (_ccmd_check)) {{ return }}
+    & "{python_exec}" "$env:CCMD_HOME/run.py" {cmd} $args
+}}
+
+"""
+        else:
+            # Non-interactive commands: capture output for cd handling
+            code += f"""function {cmd} {{
     if (-not (_ccmd_check)) {{ return }}
 
     $output = & "{python_exec}" "$env:CCMD_HOME/run.py" {cmd} $args

@@ -3,6 +3,8 @@
 # YAML parsing for commands.yaml
 PyYAML>=6.0
 
-# Optional: Enhanced terminal UI (uncomment if needed)
-# prompt_toolkit>=3.0.0
-# rich>=13.0.0
+# Interactive TUI components for v1.1.0+
+questionary>=2.0.0
+
+# Git integration for smart push command
+GitPython>=3.1.0

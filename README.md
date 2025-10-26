@@ -6,7 +6,9 @@
 
 > **Cross-platform command enhancer for humans.**
 > Replace long, repetitive terminal syntax with short, intuitive commands.
-> Works on **Linux**, **macOS**, **Windows**, **PowerShell**, and **WSL** — safe, rollback-ready, and open source.
+> Works on **Linux**, **Windows PowerShell**, and **WSL** — safe, rollback-ready, and open source.
+
+> **🎉 New in v1.1.0:** Create your own custom commands! Now with `add`, `remove`, and `reload` commands for instant customization.
 
 ---
 
@@ -36,14 +38,24 @@ CCMD handles the rest. It safely installs into your shell profile, manages custo
 
 ## ✨ Features
 
-* **Cross-Platform Support** — Bash, Zsh, Fish, PowerShell, CMD, and WSL.
+### 🆕 v1.1.0 Features
+* **✨ Custom Commands** — Create your own commands with `add`, manage with `remove`
+* **🔄 Instant Reload** — `reload` command updates config without manual reinstall
+* **🎯 Interactive Push** — Full git workflow with file selection and auto-commit messages
+* **📋 Command Manager** — Enable/disable commands with `list`
+* **🛡️ Graceful Cancellation** — Press Ctrl+C anytime without ugly errors
+* **🌍 Better Windows Support** — Fully tested on PowerShell with proper encoding
+
+### Core Features
+* **Cross-Platform Support** — Linux, WSL, Windows PowerShell (macOS code exists but untested*)
 * **Natural Commands** — No prefixes; just type `go`, `push`, `cpu`, etc.
-* **Interactive Command Editor** — Add or edit commands right from your terminal.
-* **Auto Git Integration** — Add, commit, and push automatically.
-* **System Insights** — Monitor CPU, memory, and processes.
-* **SSH Shortcuts** — One-command access to your saved servers.
-* **Safe Rollback** — Backs up your shell configuration before any changes.
-* **Extensible Design** — Add plugins or Python functions as custom commands.
+* **Smart Directory Navigation** — Search and jump to directories anywhere
+* **Auto Git Integration** — Interactive add, commit, and push workflow
+* **System Insights** — Monitor CPU, memory, and processes
+* **Safe Rollback** — Backs up your shell configuration before any changes
+* **Persistent Customization** — Your custom commands survive CCMD updates
+
+*_macOS users: We need your feedback! Please test and report issues._
 
 ---
 
@@ -51,6 +63,7 @@ CCMD handles the rest. It safely installs into your shell profile, manages custo
 
 For detailed guides and technical documentation, see:
 
+* **[Features](FEATURES.md)** — Complete feature list and what's new in v1.1.0
 * **[Installation Guide](INSTALLATION.md)** — Step-by-step installation for all platforms
 * **[Usage Guide](USAGE.md)** — Complete command reference and usage examples
 * **[Configuration Guide](CONFIGURATION.md)** — Customize and create your own commands
@@ -117,7 +130,7 @@ If you're not familiar with Git, download the official release:
 1. **Download the latest release:**
    - Visit: https://github.com/Wisyle/ccmd/releases/latest
    - Download **Source code (zip)** under Assets
-   - Or direct download: https://github.com/Wisyle/ccmd/archive/refs/tags/v1.0.4.zip
+   - Or direct download: https://github.com/Wisyle/ccmd/archive/refs/tags/v1.1.0.zip
 
 2. **Extract the files:**
    - Extract the downloaded ZIP file
@@ -184,46 +197,82 @@ python3 run.py --install
 
 ## 🧠 Default Commands
 
-| Command               | Description                    | Action                               |
-| --------------------- | ------------------------------ | ------------------------------------ |
-| `go <dir>`            | Navigate to a directory        | `cd ~/Downloads`                     |
-| `push`                | Auto git add, commit, and push | Auto commit message based on changes |
-| `cpu`                 | Show CPU stats                 | Python system monitor                |
-| `mem`                 | Show memory usage              | Python system monitor                |
-| `proc`                | List running processes         | Safe task list                       |
-| `kap`                 | Kill all user processes        | Prompts before execution             |
-| `ssh`                 | Connect to default server      | Uses saved SSH key                   |
-| `addssh <alias> <ip>` | Add new SSH target             | Saves to YAML                        |
-| `syscheck`            | Check OS/shell compatibility   | Reports readiness                    |
-| `restore`             | Rollback installation          | Restores shell rc/profile            |
-| `update`              | Pull latest CCMD version       | Auto git pull                        |
+### Navigation
+| Command      | Description                      | Example           |
+| ------------ | -------------------------------- | ----------------- |
+| `go <dir>`   | Navigate to directory or search  | `go downloads`    |
+
+### Git Operations
+| Command | Description                           | Notes                             |
+| ------- | ------------------------------------- | --------------------------------- |
+| `push`  | Interactive git add, commit, and push | Auto-generates commit messages 🆕 |
+
+### System Monitoring
+| Command | Description           | Platform Support   |
+| ------- | --------------------- | ------------------ |
+| `cpu`   | Show CPU usage        | Linux, macOS, Windows |
+| `mem`   | Show memory usage     | Linux, macOS, Windows |
+| `proc`  | List running processes| Linux, macOS, Windows |
+| `kap`   | Kill process by PID   | Linux, macOS, Windows |
+
+### Custom Commands 🆕 v1.1.0
+| Command  | Description                    | Notes                               |
+| -------- | ------------------------------ | ----------------------------------- |
+| `add`    | Create a custom command        | Interactive prompts                 |
+| `remove` | Delete a custom command        | Shows list to select from           |
+| `list`   | Manage commands (enable/disable)| Toggle commands on/off             |
+
+### CCMD Management
+| Command     | Description                       | Notes                    |
+| ----------- | --------------------------------- | ------------------------ |
+| `reload`    | Reload config and update shell 🆕 | No manual reinstall needed |
+| `update`    | Update CCMD from GitHub           | Downloads latest version |
+| `version`   | Show current and latest version   | Checks GitHub releases   |
+| `restore`   | Restore shell config from backup  | Rollback changes         |
+| `uninstall` | Remove CCMD completely            | Cleans everything        |
+| `hi`        | Show system dashboard             | System overview          |
 
 ---
 
 ## ⚙️ Configuration
 
-All custom commands are stored in:
+### Default Commands
+
+CCMD default commands are defined in `$CCMD_HOME/commands.yaml`. These are managed by CCMD and updated when you upgrade.
+
+### Custom Commands (v1.1.0+)
+
+Your custom commands are stored separately in:
 
 ```
-~/.ccmd/commands.yaml
+~/.ccmd/custom_commands.yaml
 ```
 
-Edit manually or use the interactive editor:
+**Why separate?** Your custom commands survive CCMD updates and never get overwritten.
 
+**Create custom commands:**
 ```bash
-ccmd --edit
+add                    # Interactive command creation
+```
+
+**Remove custom commands:**
+```bash
+remove                 # Interactive command removal
+```
+
+**Reload after manual edits:**
+```bash
+reload                 # Reloads config and updates shell
 ```
 
 Each command follows this format:
 
 ```yaml
-go:
-  description: "Navigate to a directory"
-  exec: "cd {arg}"
-
-push:
-  description: "Auto git add, commit, and push"
-  exec: "git add . && git commit -m 'auto: {changes}' && git push"
+mycommand:
+  description: "What this command does"
+  action: "the shell command to execute"
+  type: custom
+  interactive: false   # Set to true for commands needing user input
 ```
 
 ---

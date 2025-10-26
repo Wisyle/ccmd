@@ -230,18 +230,27 @@ After installation, use the command directly without `python3 run.py`.
 
 **Solution:**
 
-Reload commands:
+Reload commands and shell integration:
 ```bash
-# Option 1
+# Quick way (v1.1.0+)
+reload
+
+# Manual way
 python3 run.py --reload
 
-# Option 2
-update
+# Then reload your shell:
+# Bash/Zsh
+source ~/.bashrc
 
-# Option 3
-python3 run.py --install
-source ~/.bashrc  # or ~/.zshrc
+# PowerShell
+. $PROFILE
 ```
+
+The `reload` command will:
+- Reload all commands from YAML files
+- Include custom commands from `~/.ccmd/custom_commands.yaml`
+- Update shell integration automatically
+- Show platform-specific reload instructions
 
 ### YAML Syntax Errors
 

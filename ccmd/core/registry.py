@@ -22,8 +22,13 @@ class CommandRegistry:
         else:
             self.config_path = Path(config_path)
 
+        # Path for custom user commands
+        self.custom_config_path = Path.home() / ".ccmd" / "custom_commands.yaml"
+
         self.commands: Dict[str, Dict[str, Any]] = {}
+        self.custom_commands: Dict[str, Dict[str, Any]] = {}
         self._load_commands()
+        self._load_custom_commands()
 
     def _get_default_config_path(self) -> Path:
         """Get the default config path"""
@@ -46,7 +51,7 @@ class CommandRegistry:
             return
 
         try:
-            with open(self.config_path, 'r') as f:
+            with open(self.config_path, 'r', encoding='utf-8') as f:
                 data = yaml.safe_load(f)
                 if data and 'commands' in data:
                     self.commands = data['commands']
@@ -54,6 +59,24 @@ class CommandRegistry:
                     self.commands = {}
         except Exception as e:
             raise RuntimeError(f"Failed to load commands from {self.config_path}: {e}")
+
+    def _load_custom_commands(self):
+        """Load custom user commands from personal config"""
+        if not self.custom_config_path.exists():
+            self.custom_commands = {}
+            return
+
+        try:
+            with open(self.custom_config_path, 'r', encoding='utf-8') as f:
+                data = yaml.safe_load(f)
+                if data and 'commands' in data:
+                    self.custom_commands = data['commands']
+                else:
+                    self.custom_commands = {}
+        except Exception as e:
+            # Don't raise error for custom commands, just log warning
+            print(f"Warning: Failed to load custom commands from {self.custom_config_path}: {e}")
+            self.custom_commands = {}
 
     def save_commands(self):
         """Save commands to YAML file"""
@@ -68,15 +91,35 @@ class CommandRegistry:
 
             # Save commands
             data = {'commands': self.commands}
-            with open(self.config_path, 'w') as f:
+            with open(self.config_path, 'w', encoding='utf-8') as f:
                 yaml.safe_dump(data, f, default_flow_style=False, sort_keys=False)
 
         except Exception as e:
             raise RuntimeError(f"Failed to save commands to {self.config_path}: {e}")
 
+    def save_custom_commands(self):
+        """Save custom user commands to personal config"""
+        try:
+            # Ensure parent directory exists
+            self.custom_config_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Create backup before saving
+            if self.custom_config_path.exists():
+                backup_path = self.custom_config_path.with_suffix('.yaml.bak')
+                shutil.copy2(self.custom_config_path, backup_path)
+
+            # Save custom commands
+            data = {'commands': self.custom_commands}
+            with open(self.custom_config_path, 'w', encoding='utf-8') as f:
+                yaml.safe_dump(data, f, default_flow_style=False, sort_keys=False)
+
+        except Exception as e:
+            raise RuntimeError(f"Failed to save custom commands to {self.custom_config_path}: {e}")
+
     def get_command(self, name: str) -> Optional[Dict[str, Any]]:
         """
         Get a command definition by name
+        Custom commands override default commands if same name exists
 
         Args:
             name: Command name
@@ -84,21 +127,29 @@ class CommandRegistry:
         Returns:
             Command definition dict or None if not found
         """
+        # Check custom commands first (they override defaults)
+        if name in self.custom_commands:
+            return self.custom_commands.get(name)
         return self.commands.get(name)
 
-    def add_command(self, name: str, command_def: Dict[str, Any]):
+    def add_command(self, name: str, command_def: Dict[str, Any], is_custom: bool = False):
         """
         Add or update a command definition
 
         Args:
             name: Command name
             command_def: Command definition dictionary
+            is_custom: If True, adds to custom commands (user-defined)
         """
-        self.commands[name] = command_def
+        if is_custom:
+            self.custom_commands[name] = command_def
+        else:
+            self.commands[name] = command_def
 
     def remove_command(self, name: str) -> bool:
         """
         Remove a command definition
+        Removes from custom commands first, then default commands
 
         Args:
             name: Command name
@@ -106,22 +157,39 @@ class CommandRegistry:
         Returns:
             True if command was removed, False if not found
         """
+        # Try removing from custom commands first
+        if name in self.custom_commands:
+            del self.custom_commands[name]
+            return True
+
         if name in self.commands:
             del self.commands[name]
             return True
+
         return False
 
     def list_commands(self) -> List[str]:
-        """Get list of all command names"""
-        return list(self.commands.keys())
+        """Get list of all command names (default + custom, custom overrides)"""
+        # Merge commands, custom overrides defaults
+        all_cmds = {**self.commands, **self.custom_commands}
+        return list(all_cmds.keys())
+
+    def list_custom_commands(self) -> List[str]:
+        """Get list of custom command names only"""
+        return list(self.custom_commands.keys())
+
+    def is_custom_command(self, name: str) -> bool:
+        """Check if a command is a custom user command"""
+        return name in self.custom_commands
 
     def get_all_commands(self) -> Dict[str, Dict[str, Any]]:
-        """Get all command definitions"""
-        return self.commands.copy()
+        """Get all command definitions (default + custom, custom overrides)"""
+        # Merge commands, custom overrides defaults
+        return {**self.commands, **self.custom_commands}
 
     def command_exists(self, name: str) -> bool:
-        """Check if a command exists"""
-        return name in self.commands
+        """Check if a command exists (in default or custom commands)"""
+        return name in self.commands or name in self.custom_commands
 
     def validate_command(self, command_def: Dict[str, Any]) -> bool:
         """
@@ -147,8 +215,9 @@ class CommandRegistry:
         return True
 
     def reload(self):
-        """Reload commands from file"""
+        """Reload commands from files (both default and custom)"""
         self._load_commands()
+        self._load_custom_commands()
 
 
 def create_default_config(path: Path):
@@ -227,5 +296,5 @@ def create_default_config(path: Path):
     }
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, 'w') as f:
+    with open(path, 'w', encoding='utf-8') as f:
         yaml.safe_dump(default_commands, f, default_flow_style=False, sort_keys=False)

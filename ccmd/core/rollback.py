@@ -30,7 +30,7 @@ class BackupManager:
         """Load backup manifest"""
         if self.manifest_file.exists():
             try:
-                with open(self.manifest_file, 'r') as f:
+                with open(self.manifest_file, 'r', encoding='utf-8') as f:
                     self.manifest = json.load(f)
             except:
                 self.manifest = {"backups": []}
@@ -40,7 +40,7 @@ class BackupManager:
     def _save_manifest(self):
         """Save backup manifest"""
         try:
-            with open(self.manifest_file, 'w') as f:
+            with open(self.manifest_file, 'w', encoding='utf-8') as f:
                 json.dump(self.manifest, f, indent=2)
         except Exception as e:
             raise RuntimeError(f"Failed to save manifest: {e}")
@@ -245,7 +245,7 @@ class RollbackManager:
         try:
             # Read current content
             if file_path.exists():
-                with open(file_path, 'r') as f:
+                with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
             else:
                 content = ""
@@ -255,7 +255,7 @@ class RollbackManager:
 
             # Write new content
             file_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(file_path, 'w') as f:
+            with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(new_content)
 
             return True, "File edited successfully"

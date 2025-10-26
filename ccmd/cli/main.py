@@ -8,6 +8,16 @@ import subprocess
 from pathlib import Path
 from datetime import datetime
 
+# Fix Windows console encoding for Unicode support
+if sys.platform == 'win32':
+    try:
+        # Try to set console to UTF-8 mode (Windows 10+)
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        kernel32.SetConsoleOutputCP(65001)  # UTF-8
+    except:
+        pass  # Ignore if fails
+
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -199,34 +209,52 @@ def search_directory(dir_name: str) -> str:
     import subprocess
 
     # Common search locations
-    search_paths = [
-        os.path.expanduser("~"),
-        "/mnt/c/Users/rober",
-        "/mnt/c/Users/rober/Downloads",
-        "/mnt/c/Users/rober/targlobal",
-    ]
+    if sys.platform == 'win32':
+        # More targeted search paths for Windows
+        username = os.getenv('USERNAME')
+        search_paths = []
+        if username:
+            search_paths.extend([
+                f"C:\\Users\\{username}",
+                f"C:\\Users\\{username}\\Downloads",
+                f"C:\\Users\\{username}\\Documents",
+                f"C:\\Users\\{username}\\Desktop",
+                f"C:\\Users\\{username}\\targlobal",
+            ])
+        search_paths.append(os.path.expanduser("~"))
+    else:
+        search_paths = [
+            os.path.expanduser("~"),
+            "/mnt/c/Users/rober",
+            "/mnt/c/Users/rober/Downloads",
+            "/mnt/c/Users/rober/targlobal",
+        ]
 
     debug_print(f"Searching for directory: {dir_name}")
 
+    # Use Python's os.walk for cross-platform compatibility
     for base_path in search_paths:
         if not os.path.exists(base_path):
             continue
 
-        # Try to find the directory with find command (faster)
         try:
-            result = subprocess.run(
-                ["find", base_path, "-maxdepth", "3", "-type", "d", "-iname", dir_name],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
+            # Search up to 3 levels deep
+            for root, dirs, files in os.walk(base_path):
+                # Calculate depth
+                depth = root[len(base_path):].count(os.sep)
 
-            if result.returncode == 0 and result.stdout.strip():
-                paths = result.stdout.strip().split('\n')
-                # Return first match
-                first_match = paths[0]
-                debug_print(f"Found directory: {first_match}")
-                return first_match
+                # If we're at max depth, don't descend further
+                if depth >= 3:
+                    dirs[:] = []  # Don't descend into subdirectories
+                    continue
+
+                # Check directories (case-insensitive)
+                for d in dirs:
+                    if d.lower() == dir_name.lower():
+                        found_path = os.path.join(root, d)
+                        debug_print(f"Found directory: {found_path}")
+                        return found_path
+
         except Exception as e:
             debug_print(f"Search error in {base_path}: {e}")
             continue
@@ -259,6 +287,8 @@ def main():
                        help='Reload commands from configuration')
     parser.add_argument('--list', action='store_true',
                        help='List all available commands')
+    parser.add_argument('--version', action='store_true',
+                       help='Show current and latest CCMD version')
     parser.add_argument('--update', action='store_true',
                        help='Update CCMD to latest version from GitHub')
     parser.add_argument('--debug', action='store_true',
@@ -279,7 +309,7 @@ def main():
     # Handle debug mode if no other command
     if args.debug and not any([args.install, args.uninstall, args.restore,
                                 args.check, args.edit, args.test, args.reload,
-                                args.list, args.update, args.exec, args.command]):
+                                args.list, args.version, args.update, args.exec, args.command]):
         return handle_debug()
 
     # Handle management flags
@@ -287,6 +317,8 @@ def main():
         return handle_install()
     elif args.uninstall:
         return handle_uninstall()
+    elif args.version:
+        return handle_version()
     elif args.update:
         return handle_update()
     elif args.restore:
@@ -524,15 +556,36 @@ def handle_test():
 
 
 def handle_reload():
-    """Handle command reload"""
-    CommandOutput.print_info("Reloading commands...")
+    """Handle command reload and shell integration update"""
+    from ccmd.cli.install import install_ccmd
 
+    CommandOutput.print_info("Reloading CCMD configuration...")
+
+    # Reload commands from config
     registry = CommandRegistry()
     registry.reload()
     commands = registry.list_commands()
 
-    CommandOutput.print_success(f"Reloaded {len(commands)} commands")
-    return 0
+    CommandOutput.print_success(f"✓ Reloaded {len(commands)} commands")
+
+    # Reinstall shell integration to apply changes
+    CommandOutput.print_info("Updating shell integration...")
+    success, message = install_ccmd()
+
+    if success:
+        CommandOutput.print_success("✓ Shell integration updated!")
+        print()
+        # Show appropriate reload command based on platform
+        if sys.platform == 'win32':
+            print(f"{Colors.BOLD}→ Run: . $PROFILE{Colors.END}")
+        else:
+            print(f"{Colors.BOLD}→ Run: source ~/.bashrc{Colors.END}")
+            print(f"{Colors.CYAN}   (or ~/.zshrc for zsh, ~/.config/fish/config.fish for fish){Colors.END}")
+        print()
+        return 0
+    else:
+        CommandOutput.print_error(f"Shell integration failed: {message}")
+        return 1
 
 
 def handle_list():
@@ -549,6 +602,97 @@ def handle_list():
         cmd_def = registry.get_command(cmd)
         desc = cmd_def.get('description', 'No description')
         print(f"  {cmd:12} - {desc}")
+
+    print()
+    print("Options:")
+    print("  1. Done (exit)")
+    print("  2. Edit commands (enable/disable)")
+    print()
+    sys.stdout.flush()
+
+    choice = input("Enter choice (1-2) or press Enter to exit: ").strip()
+
+    if choice == '2':
+        from ccmd.cli.interactive import interactive_list_editor
+        return interactive_list_editor()
+
+    return 0
+
+
+def handle_version():
+    """Show version information"""
+    import json
+    import urllib.request
+    from ccmd import __version__
+
+    print()
+    print(f"{Colors.BOLD}{Colors.HEADER}{'='*60}{Colors.END}")
+    print(f"{Colors.BOLD}{Colors.CYAN}  CCMD Version Information{Colors.END}")
+    print(f"{Colors.BOLD}{Colors.HEADER}{'='*60}{Colors.END}")
+    print()
+
+    # Current version
+    print(f"{Colors.BOLD}{Colors.BLUE}[Current Version]{Colors.END}")
+    print(f"  {Colors.GREEN}v{__version__}{Colors.END}")
+    print()
+
+    # Check latest version from GitHub
+    print(f"{Colors.BOLD}{Colors.BLUE}[Latest Version]{Colors.END}")
+    try:
+        api_url = "https://api.github.com/repos/Wisyle/ccmd/releases/latest"
+        with urllib.request.urlopen(api_url, timeout=5) as response:
+            release_data = json.loads(response.read().decode())
+
+        latest_version = release_data['tag_name']
+        release_name = release_data.get('name', latest_version)
+        release_body = release_data.get('body', 'No release notes available')
+        published_at = release_data.get('published_at', '')
+
+        # Parse date
+        if published_at:
+            from datetime import datetime
+            pub_date = datetime.fromisoformat(published_at.replace('Z', '+00:00'))
+            date_str = pub_date.strftime('%B %d, %Y')
+        else:
+            date_str = 'Unknown'
+
+        # Show latest version
+        if f"v{__version__}" == latest_version:
+            print(f"  {Colors.GREEN}{latest_version}{Colors.END} {Colors.CYAN}(You are up to date!){Colors.END}")
+        else:
+            print(f"  {Colors.YELLOW}{latest_version}{Colors.END} {Colors.RED}(Update available!){Colors.END}")
+
+        print(f"  {Colors.CYAN}Released: {date_str}{Colors.END}")
+        print()
+
+        # Show release notes
+        print(f"{Colors.BOLD}{Colors.BLUE}[Release Notes]{Colors.END}")
+        # Parse and colorize release notes
+        for line in release_body.split('\n'):
+            line = line.strip()
+            if line.startswith('##'):
+                print(f"  {Colors.BOLD}{Colors.PURPLE}{line}{Colors.END}")
+            elif line.startswith('- ') or line.startswith('* '):
+                print(f"  {Colors.GREEN}✓{Colors.END} {line[2:]}")
+            elif line.startswith('###'):
+                print(f"  {Colors.BOLD}{Colors.CYAN}{line}{Colors.END}")
+            elif line:
+                print(f"  {line}")
+
+        print()
+
+        # Show update command if outdated
+        if f"v{__version__}" != latest_version:
+            print(f"{Colors.YELLOW}→ Run 'update' to install the latest version{Colors.END}")
+            print()
+
+    except Exception as e:
+        print(f"  {Colors.YELLOW}Could not fetch latest version{Colors.END}")
+        print(f"  {Colors.CYAN}(Check your internet connection){Colors.END}")
+        print()
+
+    print(f"{Colors.BOLD}{Colors.HEADER}{'='*60}{Colors.END}")
+    print()
 
     return 0
 
@@ -703,6 +847,25 @@ def handle_command(command_name: str, args: list):
     # Special handling for 'hi' command
     if command_name == 'hi':
         return handle_hi()
+
+    # Special handling for 'push' command - use interactive version
+    if command_name == 'push':
+        from ccmd.cli.interactive import interactive_push
+        return interactive_push()
+
+    # Special handling for 'list' command - use interactive version
+    if command_name == 'list':
+        return handle_list()
+
+    # Special handling for 'add' command - use interactive version
+    if command_name == 'add':
+        from ccmd.cli.interactive import interactive_add_command
+        return interactive_add_command()
+
+    # Special handling for 'remove' command - use interactive version
+    if command_name == 'remove':
+        from ccmd.cli.interactive import interactive_remove_command
+        return interactive_remove_command()
 
     # Save command to history
     save_command_history(f"{command_name} {' '.join(args)}")
