@@ -1,0 +1,58 @@
+commands:
+  go:
+    description: Navigate to common directories
+    action:
+      downloads: cd ~/Downloads
+      documents: cd ~/Documents
+      desktop: cd ~/Desktop
+      home: cd ~
+    type: navigation
+
+  push:
+    description: Git add, commit, and push
+    action: git add . && git commit -m "{message}" && git push
+    type: git
+    prompt: Enter commit message
+
+  cpu:
+    description: Show CPU usage
+    action:
+      linux: top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1"%"}'
+      macos: top -l 1 | grep "CPU usage"
+      windows: powershell "Get-Counter '\Processor(_Total)\% Processor Time' | Select-Object -ExpandProperty CounterSamples | Select-Object CookedValue"
+    type: system
+
+  mem:
+    description: Show memory usage
+    action:
+      linux: free -h
+      macos: vm_stat
+      windows: powershell "Get-Counter '\Memory\Available MBytes' | Select-Object -ExpandProperty CounterSamples | Select-Object CookedValue"
+    type: system
+
+  proc:
+    description: Show running processes
+    action:
+      linux: ps aux
+      macos: ps aux
+      windows: tasklist
+    type: system
+
+  kap:
+    description: Kill a process by name or PID
+    action:
+      linux: kill -9 {pid}
+      macos: kill -9 {pid}
+      windows: taskkill /F /PID {pid}
+    type: system
+    prompt: Enter process ID
+
+  update:
+    description: Update CCMD commands from config
+    action: ccmd --reload
+    type: internal
+
+  restore:
+    description: Restore shell configuration from backup
+    action: ccmd --restore
+    type: internal

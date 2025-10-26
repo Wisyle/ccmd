@@ -1,0 +1,8 @@
+# CCMD Python Dependencies
+
+# YAML parsing for commands.yaml
+PyYAML>=6.0
+
+# Optional: Enhanced terminal UI (uncomment if needed)
+# prompt_toolkit>=3.0.0
+# rich>=13.0.0
