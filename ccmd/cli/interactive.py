@@ -177,17 +177,29 @@ def get_git_status(repo) -> dict:
         if process.returncode == 0:
             print(f"{Colors.GREEN}✓ Status check complete{Colors.END}", file=sys.stderr)
 
-            # Parse porcelain output
-            for line in stdout.strip().split('\n'):
-                if not line:
+            # Debug: Show raw output (remove after testing)
+            import os
+            if os.environ.get('CCMD_DEBUG'):
+                print(f"[DEBUG] Raw git status output:", file=sys.stderr)
+                print(f"[DEBUG] {repr(stdout)}", file=sys.stderr)
+
+            # Parse porcelain output (v1.1.1 fix: use splitlines() instead of strip().split())
+            lines = stdout.splitlines()  # This preserves empty strings but splits correctly
+
+            for line in lines:
+                if not line or len(line) < 2:
                     continue
 
                 status_code = line[:2]
-                file_path = line[3:].strip()
+                file_path = line[3:] if len(line) > 3 else ""
 
                 # XY format: X = staged, Y = unstaged
                 x = status_code[0]
                 y = status_code[1]
+
+                # Debug output
+                if os.environ.get('CCMD_DEBUG'):
+                    print(f"[DEBUG] Line: {repr(line)}, X={repr(x)}, Y={repr(y)}, Path={repr(file_path)}", file=sys.stderr)
 
                 if x == '?' and y == '?':
                     status['untracked'].append(file_path)
@@ -200,6 +212,14 @@ def get_git_status(repo) -> dict:
                     status['modified'].append(file_path)
                 elif y == 'D':
                     status['deleted'].append(file_path)
+
+            # Debug: Show parsed results
+            if os.environ.get('CCMD_DEBUG'):
+                print(f"[DEBUG] Parsed status:", file=sys.stderr)
+                print(f"[DEBUG]   Untracked: {status['untracked']}", file=sys.stderr)
+                print(f"[DEBUG]   Modified: {status['modified']}", file=sys.stderr)
+                print(f"[DEBUG]   Staged: {status['staged']}", file=sys.stderr)
+                print(f"[DEBUG]   Deleted: {status['deleted']}", file=sys.stderr)
         else:
             print(f"{Colors.RED}✗ Status check failed{Colors.END}", file=sys.stderr)
 
@@ -349,8 +369,14 @@ def interactive_push():
     print(f"{Colors.BOLD}Current branch:{Colors.END} {Colors.CYAN}{status['branch']}{Colors.END}")
     print()
 
-    # Show file status
+    # Show file status (v1.1.1 fix: include staged files)
     all_files = []
+    staged_files = []
+
+    if status['staged']:
+        print(f"{Colors.GREEN}Staged files:{Colors.END} {len(status['staged'])}")
+        staged_files = status['staged']
+        # Staged files are already added, so we'll handle them separately
 
     if status['modified']:
         print(f"{Colors.YELLOW}Modified files:{Colors.END} {len(status['modified'])}")
@@ -364,63 +390,69 @@ def interactive_push():
         print(f"{Colors.RED}Deleted files:{Colors.END} {len(status['deleted'])}")
         all_files.extend([(f, 'deleted') for f in status['deleted']])
 
-    if not all_files:
+    # Handle different scenarios (v1.1.1 fix: properly handle staged files)
+    if not all_files and not staged_files:
         print(f"{Colors.GREEN}✓ No changes to commit{Colors.END}")
         return 0
 
-    print()
-
-    # Step 5: File selection
-    print("How do you want to stage files?")
-    print(f"  {Colors.GREEN}1.{Colors.END} Add all files")
-    print(f"  {Colors.GREEN}2.{Colors.END} Select specific files")
-    print()
-    sys.stdout.flush()
-
-    file_choice = safe_input(f"{Colors.CYAN}Enter choice (1-2): {Colors.END}").strip()
-
-    if file_choice == '1':
-        # Add all files
-        repo.git.add(A=True)
-        print(f"{Colors.GREEN}✓ Added all files{Colors.END}\n")
-    elif file_choice == '2':
-        # Show files and let user select
-        print(f"\n{Colors.BOLD}Available files:{Colors.END}")
-        for i, (file, status_type) in enumerate(all_files, 1):
-            print(f"  {Colors.GREEN}{i}.{Colors.END} [{status_type}] {file}")
-
+    # Step 5: File selection (skip if only staged files exist)
+    if all_files:
+        # We have unstaged files - ask user how to stage them
+        print()
+        print("How do you want to stage files?")
+        print(f"  {Colors.GREEN}1.{Colors.END} Add all files")
+        print(f"  {Colors.GREEN}2.{Colors.END} Select specific files")
         print()
         sys.stdout.flush()
-        selection = safe_input(f"{Colors.CYAN}Enter file numbers (comma-separated, e.g., 1,3,5) or 'all': {Colors.END}").strip()
 
-        if selection.lower() == 'all':
-            for file, _ in all_files:
-                repo.git.add(file)
+        file_choice = safe_input(f"{Colors.CYAN}Enter choice (1-2): {Colors.END}").strip()
+
+        if file_choice == '1':
+            # Add all files
+            repo.git.add(A=True)
             print(f"{Colors.GREEN}✓ Added all files{Colors.END}\n")
-        else:
-            try:
-                indices = [int(x.strip()) - 1 for x in selection.split(',')]
-            except ValueError:
-                print(f"{Colors.RED}✗ Invalid selection - please enter numbers{Colors.END}")
-                return 1
+        elif file_choice == '2':
+            # Show files and let user select
+            print(f"\n{Colors.BOLD}Available files:{Colors.END}")
+            for i, (file, status_type) in enumerate(all_files, 1):
+                print(f"  {Colors.GREEN}{i}.{Colors.END} [{status_type}] {file}")
 
-            added = 0
-            for idx in indices:
-                if 0 <= idx < len(all_files):
-                    try:
-                        repo.git.add(all_files[idx][0])
-                        added += 1
-                    except Exception as e:
-                        print(f"{Colors.YELLOW}⚠ Could not add {all_files[idx][0]}: {e}{Colors.END}")
+            print()
+            sys.stdout.flush()
+            selection = safe_input(f"{Colors.CYAN}Enter file numbers (comma-separated, e.g., 1,3,5) or 'all': {Colors.END}").strip()
 
-            if added > 0:
-                print(f"{Colors.GREEN}✓ Added {added} file(s){Colors.END}\n")
+            if selection.lower() == 'all':
+                for file, _ in all_files:
+                    repo.git.add(file)
+                print(f"{Colors.GREEN}✓ Added all files{Colors.END}\n")
             else:
-                print(f"{Colors.RED}✗ No files were added{Colors.END}")
-                return 1
-    else:
-        print(f"{Colors.RED}✗ Invalid choice{Colors.END}")
-        return 1
+                try:
+                    indices = [int(x.strip()) - 1 for x in selection.split(',')]
+                except ValueError:
+                    print(f"{Colors.RED}✗ Invalid selection - please enter numbers{Colors.END}")
+                    return 1
+
+                added = 0
+                for idx in indices:
+                    if 0 <= idx < len(all_files):
+                        try:
+                            repo.git.add(all_files[idx][0])
+                            added += 1
+                        except Exception as e:
+                            print(f"{Colors.YELLOW}⚠ Could not add {all_files[idx][0]}: {e}{Colors.END}")
+
+                if added > 0:
+                    print(f"{Colors.GREEN}✓ Added {added} file(s){Colors.END}\n")
+                else:
+                    print(f"{Colors.RED}✗ No files were added{Colors.END}")
+                    return 1
+        else:
+            print(f"{Colors.RED}✗ Invalid choice{Colors.END}")
+            return 1
+    elif staged_files:
+        # Only staged files - skip file selection
+        print(f"{Colors.GREEN}✓ All changes are already staged{Colors.END}")
+        print()
 
     # Step 6: Commit message
     auto_message = generate_commit_message(repo)
