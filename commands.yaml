@@ -47,51 +47,51 @@ commands:
     prompt: Enter process ID
   update:
     description: Update CCMD to latest version from GitHub
-    action: python3 $CCMD_HOME/run.py --update
+    action: python $CCMD_HOME/run.py --update
     type: internal
   restore:
     description: Restore shell configuration from backup
-    action: python3 $CCMD_HOME/run.py --restore
+    action: python $CCMD_HOME/run.py --restore
     type: internal
   uninstall:
     description: Uninstall CCMD and remove shell integration
-    action: python3 $CCMD_HOME/run.py --uninstall
+    action: python $CCMD_HOME/run.py --uninstall
     type: internal
   hi:
     description: Show personalized dashboard with system overview
-    action: python3 $CCMD_HOME/run.py hi
+    action: python $CCMD_HOME/run.py hi
     type: internal
   list:
     description: List all available CCMD commands
-    action: python3 $CCMD_HOME/run.py --list
+    action: python $CCMD_HOME/run.py --list
     type: internal
     interactive: true
   version:
     description: Show current and latest CCMD version
-    action: python3 $CCMD_HOME/run.py --version
+    action: python $CCMD_HOME/run.py --version
     type: internal
   add:
     description: Add a custom command
-    action: python3 $CCMD_HOME/run.py add
+    action: python $CCMD_HOME/run.py add
     type: internal
     interactive: true
   remove:
     description: Remove a custom command
-    action: python3 $CCMD_HOME/run.py remove
+    action: python $CCMD_HOME/run.py remove
     type: internal
     interactive: true
   reload:
     description: Reload CCMD configuration and update shell integration
-    action: python3 $CCMD_HOME/run.py --reload
+    action: python $CCMD_HOME/run.py --reload
     type: internal
   init:
     description: Initialize master password for sensitive commands (v1.1.1)
-    action: python3 $CCMD_HOME/run.py --init
+    action: python $CCMD_HOME/run.py --init
     type: internal
     interactive: true
   debug:
     description: Show debug information and system diagnostics
-    action: python3 $CCMD_HOME/run.py --debug
+    action: python $CCMD_HOME/run.py --debug
     type: internal
   sudo:
     description: 'Run command as superuser (password protected). Usage: sudo <command>'
@@ -100,11 +100,11 @@ commands:
     require_password: true
   change-password:
     description: Change CCMD master password
-    action: python3 $CCMD_HOME/run.py --change-password
+    action: python $CCMD_HOME/run.py --change-password
     type: internal
     interactive: true
   reset-password:
     description: Reset master password (if forgotten)
-    action: python3 $CCMD_HOME/run.py --reset-password
+    action: python $CCMD_HOME/run.py --reset-password
     type: internal
     interactive: true
