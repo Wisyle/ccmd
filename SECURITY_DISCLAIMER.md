@@ -4,6 +4,17 @@
 
 **CCMD (Cross-platform Command Manager)** sits as an **interceptor between your shell and you**, simplifying command-line operations and ensuring everything runs smoothly. It provides powerful command aliasing, automation, and system control capabilities.
 
+## 📌 Recommended Version
+
+**We strongly recommend using CCMD v1.1.1 or later.**
+
+Older versions (v1.0.x, v1.1.0) will continue to work, but:
+- ❌ Lack critical security features (password protection, injection prevention)
+- ❌ Do not have important bug fixes
+- ❌ Are no longer supported with security updates
+
+**Upgrade to v1.1.1+** for the best and safest experience. [Download the latest version](https://github.com/Wisyle/ccmd/releases/latest) — it's backward compatible and takes less than 2 minutes to install.
+
 ## ⚠️ Important Warning: Use Responsibly
 
 **CCMD is a powerful tool that, if used wrongly, can be dangerous.**

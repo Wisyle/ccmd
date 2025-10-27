@@ -13,6 +13,8 @@
 
 > **⚠️ Important:** CCMD is a powerful tool that sits between your shell and you. Like electricity or any powerful tool, **it can be dangerous if used wrongly**. Please read the [Security Disclaimer](SECURITY_DISCLAIMER.md) before using CCMD. Use carefully, cautiously, and responsibly.
 
+> **📌 Version Notice:** We **strongly recommend using v1.1.1 or later**. Older versions (v1.0.x, v1.1.0) lack critical security features and bug fixes. They will continue to work but are no longer supported with security updates. [Upgrade now](https://github.com/Wisyle/ccmd/releases/latest) — it's safe, fast, and backward compatible!
+
 ---
 
 ## 🧩 Overview
