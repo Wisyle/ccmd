@@ -3,12 +3,15 @@
 [![Latest Release](https://img.shields.io/github/v/release/Wisyle/ccmd?label=Download&color=brightgreen)](https://github.com/Wisyle/ccmd/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![Security](https://img.shields.io/badge/security-enhanced-green.svg)](SECURITY_DISCLAIMER.md)
 
 > **Cross-platform command enhancer for humans.**
 > Replace long, repetitive terminal syntax with short, intuitive commands.
 > Works on **Linux**, **Windows PowerShell**, and **WSL** — safe, rollback-ready, and open source.
 
-> **🎉 New in v1.1.0:** Create your own custom commands! Now with `add`, `remove`, and `reload` commands for instant customization.
+> **🔐 New in v1.1.1:** Enterprise-grade security! Master password protection, command injection prevention, SSH key validation, and intelligent auto-locator.
+
+> **⚠️ Important:** CCMD is a powerful tool that sits between your shell and you. Like electricity or any powerful tool, **it can be dangerous if used wrongly**. Please read the [Security Disclaimer](SECURITY_DISCLAIMER.md) before using CCMD. Use carefully, cautiously, and responsibly.
 
 ---
 
@@ -38,6 +41,18 @@ CCMD handles the rest. It safely installs into your shell profile, manages custo
 
 ## ✨ Features
 
+### 🔐 v1.1.1 Security Features (NEW!)
+* **🔒 Master Password System** — Protect sensitive commands with bcrypt-hashed passwords
+* **🛡️ Command Injection Prevention** — Automatic blocking of dangerous command patterns
+* **🔐 SSH Key Validation** — Verify key permissions (0600) before use
+* **🔍 Sensitive Command Detection** — Auto-detect and protect sudo, ssh, AWS commands
+* **📁 Atomic File Operations** — Safe, corruption-proof file writes
+* **🎯 Intelligent Auto-Locator** — No more path issues, works anywhere
+* **📊 Audit Logging** — Track all authentication attempts
+* **⚡ Security Cache** — 5-minute authentication window for convenience
+
+**New Commands:** `init`, `debug`, `sudo`, `change-password`, `reset-password`
+
 ### 🆕 v1.1.0 Features
 * **✨ Custom Commands** — Create your own commands with `add`, manage with `remove`
 * **🔄 Instant Reload** — `reload` command updates config without manual reinstall
@@ -54,6 +69,7 @@ CCMD handles the rest. It safely installs into your shell profile, manages custo
 * **System Insights** — Monitor CPU, memory, and processes
 * **Safe Rollback** — Backs up your shell configuration before any changes
 * **Persistent Customization** — Your custom commands survive CCMD updates
+* **Password Protection** — Mark custom commands as requiring authentication
 
 *_macOS users: We need your feedback! Please test and report issues._
 
@@ -63,7 +79,9 @@ CCMD handles the rest. It safely installs into your shell profile, manages custo
 
 For detailed guides and technical documentation, see:
 
-* **[Features](FEATURES.md)** — Complete feature list and what's new in v1.1.0
+* **[🔐 Security Disclaimer](SECURITY_DISCLAIMER.md)** — **READ THIS FIRST!** Important security information and responsible use guidelines
+* **[📋 Release Notes v1.1.1](RELEASE_NOTES_v1.1.1.md)** — Complete changelog and upgrade guide
+* **[Features](FEATURES.md)** — Complete feature list including security features
 * **[Installation Guide](INSTALLATION.md)** — Step-by-step installation for all platforms
 * **[Usage Guide](USAGE.md)** — Complete command reference and usage examples
 * **[Configuration Guide](CONFIGURATION.md)** — Customize and create your own commands
