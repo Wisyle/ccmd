@@ -686,16 +686,24 @@ def handle_version():
 
         # Show release notes
         print(f"{Colors.BOLD}{Colors.BLUE}[Release Notes]{Colors.END}")
-        # Parse and colorize release notes
+        # Parse and colorize release notes (v1.1.1 fix: handle Unicode properly)
         for line in release_body.split('\n'):
             line = line.strip()
             if line.startswith('##'):
                 print(f"  {Colors.BOLD}{Colors.PURPLE}{line}{Colors.END}")
             elif line.startswith('- ') or line.startswith('* '):
-                print(f"  {Colors.GREEN}✓{Colors.END} {line[2:]}")
+                # Don't add another checkmark if line already has Unicode
+                bullet_text = line[2:].strip()
+                if bullet_text.startswith('✓') or bullet_text.startswith('✅') or bullet_text.startswith('❌'):
+                    # Already has Unicode symbol, just print it
+                    print(f"  {bullet_text}")
+                else:
+                    # Add checkmark for plain bullets
+                    print(f"  {Colors.GREEN}✓{Colors.END} {bullet_text}")
             elif line.startswith('###'):
                 print(f"  {Colors.BOLD}{Colors.CYAN}{line}{Colors.END}")
             elif line:
+                # Print line as-is, preserving any Unicode characters
                 print(f"  {line}")
 
         print()
