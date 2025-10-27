@@ -8,15 +8,21 @@ import subprocess
 from pathlib import Path
 from datetime import datetime
 
-# Fix Windows console encoding for Unicode support
+# Fix Windows console encoding for Unicode support (v1.1.1 Enhanced)
 if sys.platform == 'win32':
     try:
-        # Try to set console to UTF-8 mode (Windows 10+)
+        # Set console to UTF-8 mode (Windows 10+)
         import ctypes
         kernel32 = ctypes.windll.kernel32
         kernel32.SetConsoleOutputCP(65001)  # UTF-8
-    except:
-        pass  # Ignore if fails
+
+        # Reconfigure stdout/stderr to use UTF-8
+        import io
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+    except Exception as e:
+        # Fallback: If UTF-8 fails, at least don't crash
+        pass
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))

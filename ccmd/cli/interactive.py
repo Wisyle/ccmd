@@ -137,7 +137,12 @@ def check_git_config(repo) -> Tuple[bool, List[str]]:
 
 
 def get_git_status(repo) -> dict:
-    """Get detailed git status"""
+    """
+    Get detailed git status using subprocess for large repo optimization (v1.1.1)
+
+    Uses git status --porcelain for single efficient command instead of multiple
+    GitPython calls that hang on large repositories.
+    """
     status = {
         'untracked': [],
         'modified': [],
@@ -152,20 +157,60 @@ def get_git_status(repo) -> dict:
         # Get branch
         status['branch'] = repo.active_branch.name
 
-        # Get untracked files
-        status['untracked'] = repo.untracked_files
+        # Use git status --porcelain for performance (v1.1.1)
+        # This is much faster than GitPython's index.diff() on large repos
+        print(f"{Colors.CYAN}→ Checking repository status...{Colors.END}", file=sys.stderr)
+        print(f"{Colors.CYAN}  (This may take a moment for large repositories){Colors.END}", file=sys.stderr)
 
-        # Get modified files
-        status['modified'] = [item.a_path for item in repo.index.diff(None)]
+        # Run git status with real-time output for large repos
+        import subprocess
+        process = subprocess.Popen(
+            ['git', 'status', '--porcelain'],
+            cwd=repo.working_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
 
-        # Get staged files
-        status['staged'] = [item.a_path for item in repo.index.diff('HEAD')]
+        stdout, stderr = process.communicate(timeout=120)  # 2 minute timeout
 
-        # Get deleted files
-        status['deleted'] = [item.a_path for item in repo.index.diff(None) if item.deleted_file]
+        if process.returncode == 0:
+            print(f"{Colors.GREEN}✓ Status check complete{Colors.END}", file=sys.stderr)
 
+            # Parse porcelain output
+            for line in stdout.strip().split('\n'):
+                if not line:
+                    continue
+
+                status_code = line[:2]
+                file_path = line[3:].strip()
+
+                # XY format: X = staged, Y = unstaged
+                x = status_code[0]
+                y = status_code[1]
+
+                if x == '?' and y == '?':
+                    status['untracked'].append(file_path)
+                elif x == 'D':
+                    status['staged'].append(file_path)
+                    status['deleted'].append(file_path)
+                elif x in ['M', 'A', 'R', 'C']:
+                    status['staged'].append(file_path)
+                elif y == 'M':
+                    status['modified'].append(file_path)
+                elif y == 'D':
+                    status['deleted'].append(file_path)
+        else:
+            print(f"{Colors.RED}✗ Status check failed{Colors.END}", file=sys.stderr)
+
+    except subprocess.TimeoutExpired:
+        print(f"{Colors.RED}✗ Status check timed out (repository too large){Colors.END}", file=sys.stderr)
+        print(f"{Colors.YELLOW}→ Try using git commands directly{Colors.END}", file=sys.stderr)
+    except KeyboardInterrupt:
+        print(f"{Colors.YELLOW}\n→ Operation cancelled{Colors.END}", file=sys.stderr)
+        raise
     except Exception as e:
-        print(f"{Colors.RED}Error getting git status: {e}{Colors.END}")
+        print(f"{Colors.RED}Error getting git status: {e}{Colors.END}", file=sys.stderr)
 
     return status
 
