@@ -38,13 +38,22 @@ commands:
       windows: tasklist
     type: system
   kap:
-    description: Kill a process by name or PID
+    description: Kill ALL processes (with confirmation, password protected)
     action:
-      linux: kill -9 {pid}
-      macos: kill -9 {pid}
-      windows: taskkill /F /PID {pid}
+      linux: killall -9 -u $(whoami)
+      macos: killall -9 -u $(whoami)
+      windows: taskkill /F /FI "USERNAME eq %USERNAME%"
     type: system
-    prompt: Enter process ID
+    require_password: true
+    interactive: true
+  kp:
+    description: Kill process by name
+    action:
+      linux: pkill -9 {process_name}
+      macos: pkill -9 {process_name}
+      windows: taskkill /F /IM {process_name}.exe
+    type: system
+    prompt: Enter process name
   update:
     description: Update CCMD to latest version from GitHub
     action: python $CCMD_HOME/run.py --update

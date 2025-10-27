@@ -981,6 +981,23 @@ def handle_command(command_name: str, args: list):
         from ccmd.cli.interactive import interactive_remove_command
         return interactive_remove_command()
 
+    # Special handling for 'kap' - dangerous command needs confirmation
+    if command_name == 'kap':
+        print()
+        print(f"{Colors.RED}{Colors.BOLD}⚠️  WARNING: DANGEROUS OPERATION{Colors.END}")
+        print(f"{Colors.YELLOW}This will kill ALL processes owned by you!{Colors.END}")
+        print(f"{Colors.YELLOW}This may cause data loss and unsaved work.{Colors.END}")
+        print()
+
+        try:
+            confirm = input(f"{Colors.CYAN}Type 'yes' to confirm: {Colors.END}").strip().lower()
+            if confirm != 'yes':
+                print(f"{Colors.GREEN}→ Operation cancelled{Colors.END}")
+                return 0
+        except KeyboardInterrupt:
+            print(f"\n{Colors.GREEN}→ Operation cancelled{Colors.END}")
+            return 0
+
     # Save command to history
     save_command_history(f"{command_name} {' '.join(args)}")
 
