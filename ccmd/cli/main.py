@@ -941,25 +941,34 @@ def handle_command(command_name: str, args: list):
     """Handle command execution"""
     debug_print(f"Executing command: {command_name} with args: {args}")
 
-    # Special handling for 'hi' command
-    if command_name == 'hi':
-        return handle_hi()
+    # Special handling for internal commands (v1.1.1 fix)
+    # These commands have direct handler functions and should not execute shell actions
+    internal_commands = {
+        'hi': handle_hi,
+        'list': handle_list,
+        'init': handle_init,
+        'debug': handle_debug,
+        'version': handle_version,
+        'reload': handle_reload,
+        'change-password': handle_change_password,
+        'reset-password': handle_reset_password,
+        'update': handle_update,
+        'restore': handle_restore,
+        'uninstall': handle_uninstall,
+    }
 
-    # Special handling for 'push' command - use interactive version
+    if command_name in internal_commands:
+        return internal_commands[command_name]()
+
+    # Special handling for interactive commands
     if command_name == 'push':
         from ccmd.cli.interactive import interactive_push
         return interactive_push()
 
-    # Special handling for 'list' command - use interactive version
-    if command_name == 'list':
-        return handle_list()
-
-    # Special handling for 'add' command - use interactive version
     if command_name == 'add':
         from ccmd.cli.interactive import interactive_add_command
         return interactive_add_command()
 
-    # Special handling for 'remove' command - use interactive version
     if command_name == 'remove':
         from ccmd.cli.interactive import interactive_remove_command
         return interactive_remove_command()
