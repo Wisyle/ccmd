@@ -168,9 +168,10 @@ class CommandExecutor:
 
     def _expand_safe_env_vars(self, command: str) -> str:
         """
-        Safely expand environment variables in command (v1.1.1 FIX)
+        Safely expand environment variables in command (v1.1.1 Enhanced Auto-Locator)
 
         Only expands CCMD-related variables for security
+        Auto-detects CCMD_HOME if not set or incorrect
 
         Args:
             command: Command string with env vars
@@ -180,19 +181,59 @@ class CommandExecutor:
         """
         import re
 
+        # Auto-detect CCMD installation directory
+        ccmd_home = self._get_ccmd_home()
+
         # Only expand safe, known CCMD variables
         safe_vars = {
-            'CCMD_HOME': os.environ.get('CCMD_HOME', ''),
+            'CCMD_HOME': ccmd_home,
             'HOME': os.path.expanduser('~'),
         }
 
-        # Replace each safe variable
+        # Replace each safe variable (handle Windows and Unix paths)
         for var_name, var_value in safe_vars.items():
+            # Normalize path separators for the platform
+            if var_value:
+                var_value = str(Path(var_value))
+
             # Replace $VAR_NAME and ${VAR_NAME}
             command = command.replace(f'${var_name}', var_value)
             command = command.replace(f'${{{var_name}}}', var_value)
 
         return command
+
+    def _get_ccmd_home(self) -> str:
+        """
+        Auto-detect CCMD installation directory (v1.1.1 Auto-Locator)
+
+        This method intelligently finds the CCMD installation directory by:
+        1. First checking CCMD_HOME environment variable
+        2. If not set or invalid, calculating from the current file location
+        3. Validating that run.py exists at the detected location
+
+        Returns:
+            Absolute path to CCMD installation directory
+        """
+        # Method 1: Try environment variable first
+        env_ccmd_home = os.environ.get('CCMD_HOME', '')
+        if env_ccmd_home:
+            env_path = Path(env_ccmd_home)
+            if env_path.exists() and (env_path / 'run.py').exists():
+                return str(env_path.resolve())
+
+        # Method 2: Calculate from current file location
+        # This file is at: ccmd/core/executor.py
+        # CCMD_HOME is 2 levels up
+        current_file = Path(__file__).resolve()
+        ccmd_home = current_file.parent.parent.parent
+
+        # Validate that run.py exists
+        if (ccmd_home / 'run.py').exists():
+            return str(ccmd_home)
+
+        # Method 3: Fallback to environment variable even if invalid
+        # (let the command fail with a clear error message)
+        return env_ccmd_home or str(ccmd_home)
 
     def _execute_interactive(self, command: str) -> Tuple[int, str, str]:
         """
