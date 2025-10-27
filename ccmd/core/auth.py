@@ -8,6 +8,8 @@ import re
 import stat
 import sys
 import time
+import hashlib
+import secrets
 from pathlib import Path
 from typing import Tuple, Optional
 from getpass import getpass
@@ -17,8 +19,7 @@ try:
     HAS_BCRYPT = True
 except ImportError:
     HAS_BCRYPT = False
-    print("WARNING: bcrypt not installed. Password protection disabled.")
-    print("Install with: pip install bcrypt")
+    # Will use PBKDF2 fallback - secure but slightly slower than bcrypt
 
 
 # Configuration
@@ -53,10 +54,71 @@ def _set_secure_file_permissions(file_path: Path):
         pass  # Best effort - don't fail if permissions can't be set
 
 
-# Sensitive command patterns that require password
+def _hash_password_pbkdf2(password: str, salt: bytes = None) -> bytes:
+    """
+    Hash password using PBKDF2-HMAC-SHA256 (secure fallback when bcrypt unavailable)
+
+    Args:
+        password: Plain text password
+        salt: Optional salt (generates new one if not provided)
+
+    Returns:
+        Combined salt + hash as bytes
+
+    Format: salt (32 bytes) + hash (32 bytes) = 64 bytes total
+    """
+    if salt is None:
+        salt = secrets.token_bytes(32)
+
+    # PBKDF2 with 100,000 iterations (OWASP recommended minimum)
+    hash_bytes = hashlib.pbkdf2_hmac(
+        'sha256',
+        password.encode('utf-8'),
+        salt,
+        100000,  # iterations
+        dklen=32  # 32 bytes = 256 bits
+    )
+
+    # Return salt + hash combined
+    return salt + hash_bytes
+
+
+def _verify_password_pbkdf2(password: str, stored: bytes) -> bool:
+    """
+    Verify password against PBKDF2 hash
+
+    Args:
+        password: Plain text password to verify
+        stored: Stored salt + hash (64 bytes)
+
+    Returns:
+        True if password matches
+    """
+    if len(stored) != 64:
+        return False
+
+    # Extract salt (first 32 bytes) and stored hash (last 32 bytes)
+    salt = stored[:32]
+    stored_hash = stored[32:]
+
+    # Compute hash with same salt
+    computed_hash = hashlib.pbkdf2_hmac(
+        'sha256',
+        password.encode('utf-8'),
+        salt,
+        100000,
+        dklen=32
+    )
+
+    # Constant-time comparison to prevent timing attacks
+    return secrets.compare_digest(computed_hash, stored_hash)
+
+
+# Sensitive command patterns that require password (v1.1.2 - Expanded)
 SENSITIVE_PATTERNS = [
-    # SSH with embedded keys
+    # SSH with embedded keys (multiple formats)
     re.compile(r"\bssh\b.*\s-i\s+\S+", re.I),
+    re.compile(r"\bssh\b.*\s-oIdentityFile[=\s]+\S+", re.I),
     re.compile(r"\bscp\b.*\s-i\s+\S+", re.I),
     re.compile(r"\bsftp\b.*\s-i\s+\S+", re.I),
     re.compile(r"\brsync\b.*--rsh=.*ssh.*-i", re.I),
@@ -65,30 +127,52 @@ SENSITIVE_PATTERNS = [
     # Password utilities (dangerous)
     re.compile(r"\bsshpass\b", re.I),
 
-    # AWS/Cloud credentials
+    # AWS/Cloud credentials (expanded)
     re.compile(r"\b(export|set)\s+AWS_SECRET", re.I),
     re.compile(r"\b(export|set)\s+AWS_ACCESS_KEY", re.I),
+    re.compile(r"\b(export|set)\s+AZURE_", re.I),
+    re.compile(r"\b(export|set)\s+GCP_", re.I),
+    re.compile(r"\b(export|set)\s+GOOGLE_APPLICATION_CREDENTIALS", re.I),
 
-    # Database with passwords
-    re.compile(r"\bmysql\b.*-p", re.I),
+    # Database credentials (expanded)
+    re.compile(r"\bmysql\b.*(-p|--password)", re.I),
     re.compile(r"\bpsql\b.*password", re.I),
+    re.compile(r"\b(export|set)\s+PGPASSWORD", re.I),
+    re.compile(r"\b(export|set)\s+MYSQL_PWD", re.I),
+    re.compile(r"\bmongo\b.*(-p|--password)", re.I),
+    re.compile(r"\bredis-cli\b.*-a\s+", re.I),
 
-    # Docker with credentials
+    # Docker/Container credentials
     re.compile(r"\bdocker\s+login", re.I),
+    re.compile(r"\bkubectl\b.*--token", re.I),
+    re.compile(r"\bhelm\b.*--password", re.I),
 
     # Git with credentials
     re.compile(r"git\s+clone.*https?://[^@]+@", re.I),
+    re.compile(r"git\s+.*(-c\s+)?credential\.", re.I),
+
+    # API keys and tokens
+    re.compile(r"(api[_-]?key|token)[=:\s]+['\"]?\w{20,}", re.I),
+    re.compile(r"\b(export|set)\s+.*_(API_KEY|TOKEN|SECRET)", re.I),
 
     # Sudo/system commands
     re.compile(r"\bsudo\b", re.I),
     re.compile(r"\breboot\b", re.I),
     re.compile(r"\bshutdown\b", re.I),
+    re.compile(r"\binit\s+[0-6]", re.I),  # init runlevel change
+
+    # Generic password flags (catches many tools)
+    re.compile(r"--password[=\s]+\S+", re.I),
+    re.compile(r"-p\s*['\"].*['\"]", re.I),  # -p "password" pattern
 ]
 
 
 def set_password(password: str) -> Tuple[bool, str]:
     """
-    Set the master password for CCMD
+    Set the master password for CCMD (v1.1.2 - Secure fallback)
+
+    Uses bcrypt if available, otherwise falls back to PBKDF2-HMAC-SHA256.
+    Both are cryptographically secure.
 
     Args:
         password: Master password
@@ -96,15 +180,16 @@ def set_password(password: str) -> Tuple[bool, str]:
     Returns:
         Tuple of (success, message)
     """
-    if not HAS_BCRYPT:
-        return False, "bcrypt not installed. Run: pip install bcrypt"
-
     if len(password) < 8:
         return False, "Password must be at least 8 characters"
 
     try:
-        # Hash password with bcrypt
-        hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
+        # Hash password (bcrypt preferred, PBKDF2 fallback)
+        if HAS_BCRYPT:
+            hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
+        else:
+            # Secure fallback: PBKDF2 with 100k iterations
+            hashed = _hash_password_pbkdf2(password)
 
         # Ensure directory exists
         AUTH_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -116,7 +201,8 @@ def set_password(password: str) -> Tuple[bool, str]:
         # Set secure permissions (cross-platform)
         _set_secure_file_permissions(AUTH_FILE)
 
-        return True, "Master password set successfully"
+        hash_method = "bcrypt" if HAS_BCRYPT else "PBKDF2-HMAC-SHA256"
+        return True, f"Master password set successfully (using {hash_method})"
 
     except Exception as e:
         return False, f"Failed to set password: {e}"
@@ -124,7 +210,10 @@ def set_password(password: str) -> Tuple[bool, str]:
 
 def verify_password_interactive(max_tries: int = MAX_AUTH_TRIES) -> bool:
     """
-    Interactively verify master password with caching
+    Interactively verify master password with caching (v1.1.2 - Secure fallback)
+
+    Auto-detects whether password was hashed with bcrypt or PBKDF2.
+    SECURITY: Never bypasses authentication, even if bcrypt is missing.
 
     Args:
         max_tries: Maximum number of attempts
@@ -132,10 +221,6 @@ def verify_password_interactive(max_tries: int = MAX_AUTH_TRIES) -> bool:
     Returns:
         True if authentication successful, False otherwise
     """
-    if not HAS_BCRYPT:
-        print("WARNING: bcrypt not installed. Password protection bypassed.")
-        return True  # Fallback to no auth if bcrypt missing
-
     # Check cache first
     if time.time() - _last_auth_ok["ts"] < AUTH_CACHE_TTL:
         return True
@@ -150,12 +235,32 @@ def verify_password_interactive(max_tries: int = MAX_AUTH_TRIES) -> bool:
         # Load stored hash
         hashed = AUTH_FILE.read_bytes()
 
+        # Detect hash format: bcrypt starts with $2b$, PBKDF2 is 64 bytes
+        is_bcrypt = hashed.startswith(b'$2b$') or hashed.startswith(b'$2a$')
+        is_pbkdf2 = len(hashed) == 64
+
+        if is_bcrypt and not HAS_BCRYPT:
+            print("ERROR: Password was set with bcrypt, but bcrypt is not installed.")
+            print("Install with: pip install bcrypt")
+            return False
+
         # Verify password with retries
         tries = 0
         while tries < max_tries:
             try:
                 pw = getpass("CCMD password: ")
-                if bcrypt.checkpw(pw.encode(), hashed):
+
+                # Verify based on hash type
+                password_correct = False
+                if is_bcrypt:
+                    password_correct = bcrypt.checkpw(pw.encode(), hashed)
+                elif is_pbkdf2:
+                    password_correct = _verify_password_pbkdf2(pw, hashed)
+                else:
+                    print("ERROR: Unknown password hash format")
+                    return False
+
+                if password_correct:
                     # Success - cache it
                     _last_auth_ok["ts"] = time.time()
                     try:

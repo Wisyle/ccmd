@@ -134,14 +134,21 @@ class CommandRegistry:
 
     def add_command(self, name: str, command_def: Dict[str, Any], is_custom: bool = False):
         """
-        Add or update a command definition
+        Add or update a command definition (v1.1.2 - Security hardened)
 
         Args:
             name: Command name
             command_def: Command definition dictionary
             is_custom: If True, adds to custom commands (user-defined)
+
+        Security:
+            Custom commands cannot use privileged types ('system', 'internal').
+            This prevents abuse of shell=True execution path.
         """
         if is_custom:
+            # SECURITY: Force custom commands to use 'custom' type only
+            # Prevents users from bypassing safe execution by marking commands as 'system'
+            command_def['type'] = 'custom'
             self.custom_commands[name] = command_def
         else:
             self.commands[name] = command_def

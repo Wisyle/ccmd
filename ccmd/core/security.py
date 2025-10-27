@@ -14,16 +14,45 @@ from typing import Tuple, List, Optional
 
 
 class CommandSecurityValidator:
-    """Validates commands for security issues before execution"""
+    """Validates commands for security issues before execution (v1.1.2 - Enhanced)"""
 
     # Dangerous patterns that should be blocked
     DANGEROUS_PATTERNS = [
+        # Destructive operations
         r';\s*rm\s+-rf\s+/',  # Recursive delete from root
-        r':\(\)\{.*\};:',      # Fork bomb
+        r'&&\s*rm\s+-rf\s+/',  # Chained recursive delete
+        r'\|\|\s*rm\s+-rf',    # Or-chained delete
+        r'rm\s+-rf\s+/\s*$',   # Delete root at end of line
+
+        # Fork bombs and resource exhaustion
+        r':\(\)\{.*\};:',      # Fork bomb pattern 1
+        r':\(\)\{.*\|\&\}',    # Fork bomb pattern 2
+        r'\bwhile\s+true.*done',  # Infinite loop (basic)
+
+        # Direct system writes
         r'>\s*/dev/sd[a-z]',   # Direct disk write
         r'\|\s*dd\s+of=',      # Piped disk write
+        r'dd\s+if=.*of=/dev/',  # dd to device
+
+        # Piping to interpreter (command injection)
         r'curl.*\|\s*bash',    # Pipe to bash
         r'wget.*\|\s*sh',      # Pipe to shell
+        r'fetch.*\|\s*sh',     # Pipe to shell
+        r'\|\s*(python|python3|perl|ruby|node)',  # Pipe to interpreter
+
+        # Command chaining that could bypass validation
+        r'`.*`',               # Backticks (command substitution)
+        r'\$\(.*\)',           # $() command substitution
+        r'&&\s*[^\s]',         # AND chaining (could chain malicious commands)
+        r'\|\|\s*[^\s]',       # OR chaining
+        r';\s*[^\s]',          # Semicolon chaining
+
+        # Redirection abuse
+        r'>\s*/etc/',          # Write to /etc
+        r'>\s*/boot/',         # Write to /boot
+        r'>\s*/sys/',          # Write to /sys
+        r'>>\s*/etc/passwd',   # Append to passwd
+        r'>>\s*/etc/shadow',   # Append to shadow
     ]
 
     @classmethod
