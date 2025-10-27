@@ -95,3 +95,32 @@ commands:
     description: Reload CCMD configuration and update shell integration
     action: python3 $CCMD_HOME/run.py --reload
     type: internal
+
+  init:
+    description: Initialize master password for sensitive commands (v1.1.1)
+    action: python3 $CCMD_HOME/run.py --init
+    type: internal
+    interactive: true
+
+  debug:
+    description: Show debug information and system diagnostics
+    action: python3 $CCMD_HOME/run.py --debug
+    type: internal
+
+  sudo:
+    description: "Run command as superuser (password protected). Usage: sudo <command>"
+    action: sudo {0}
+    type: system
+    require_password: true
+
+  change-password:
+    description: Change CCMD master password
+    action: python3 $CCMD_HOME/run.py --change-password
+    type: internal
+    interactive: true
+
+  reset-password:
+    description: Reset master password (if forgotten)
+    action: python3 $CCMD_HOME/run.py --reset-password
+    type: internal
+    interactive: true

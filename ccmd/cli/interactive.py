@@ -425,7 +425,7 @@ def interactive_push():
 
 
 def interactive_list_editor():
-    """Interactive command list editor to enable/disable commands"""
+    """Interactive command list editor to enable/disable commands and toggle password protection (v1.1.1)"""
 
     # Load config
     from ccmd.core.registry import CommandRegistry
@@ -464,34 +464,73 @@ def interactive_list_editor():
             status = f"{Colors.RED}[DISABLED]{Colors.END}" if cmd in disabled_commands else f"{Colors.GREEN}[ENABLED] {Colors.END}"
             custom_badge = f"{Colors.PURPLE}[CUSTOM]{Colors.END} " if registry.is_custom_command(cmd) else ""
 
-            print(f"  {Colors.GREEN}{i:2}.{Colors.END} {status} {custom_badge}{cmd:12} - {desc[:50]}")
+            # Show password protection status (v1.1.1)
+            password_badge = ""
+            if cmd_def and cmd_def.get('require_password', False):
+                password_badge = f"{Colors.YELLOW}[🔒]{Colors.END} "
+
+            print(f"  {Colors.GREEN}{i:2}.{Colors.END} {status} {password_badge}{custom_badge}{cmd:12} - {desc[:50]}")
 
         print()
+        print(f"  {Colors.YELLOW}e. Toggle enable/disable{Colors.END}")
+        print(f"  {Colors.YELLOW}p. Toggle password protection{Colors.END}")
         print(f"  {Colors.YELLOW}0. Save and exit{Colors.END}")
         print()
         sys.stdout.flush()
 
-        # Get selection
-        selection = safe_input(f"{Colors.CYAN}Enter command number to toggle (0 to exit): {Colors.END}").strip()
+        # Get action choice
+        action = safe_input(f"{Colors.CYAN}Enter action (e/p/0): {Colors.END}").strip().lower()
 
-        if selection == '0':
+        if action == '0':
             break
+        elif action in ['e', 'p']:
+            # Get command number
+            selection = safe_input(f"{Colors.CYAN}Enter command number: {Colors.END}").strip()
 
-        try:
-            idx = int(selection) - 1
-            if 0 <= idx < len(all_commands):
-                cmd = all_commands[idx]
-                # Toggle command
-                if cmd in disabled_commands:
-                    disabled_commands.remove(cmd)
-                    print(f"{Colors.GREEN}✓ Enabled: {cmd}{Colors.END}")
+            try:
+                idx = int(selection) - 1
+                if 0 <= idx < len(all_commands):
+                    cmd = all_commands[idx]
+
+                    if action == 'e':
+                        # Toggle enable/disable
+                        if cmd in disabled_commands:
+                            disabled_commands.remove(cmd)
+                            print(f"{Colors.GREEN}✓ Enabled: {cmd}{Colors.END}")
+                        else:
+                            disabled_commands.add(cmd)
+                            print(f"{Colors.YELLOW}→ Disabled: {cmd}{Colors.END}")
+
+                    elif action == 'p':
+                        # Toggle password protection
+                        cmd_def = registry.get_command(cmd)
+                        if not cmd_def:
+                            print(f"{Colors.RED}✗ Command not found{Colors.END}")
+                            continue
+
+                        # Toggle password flag
+                        current_password = cmd_def.get('require_password', False)
+                        cmd_def['require_password'] = not current_password
+
+                        # Save changes based on command type
+                        if registry.is_custom_command(cmd):
+                            registry.save_custom_commands()
+                        else:
+                            registry.save_commands()
+
+                        # Reload to reflect changes
+                        registry.reload()
+
+                        if cmd_def['require_password']:
+                            print(f"{Colors.YELLOW}🔒 Password protection enabled for: {cmd}{Colors.END}")
+                        else:
+                            print(f"{Colors.GREEN}✓ Password protection disabled for: {cmd}{Colors.END}")
                 else:
-                    disabled_commands.add(cmd)
-                    print(f"{Colors.YELLOW}→ Disabled: {cmd}{Colors.END}")
-            else:
-                print(f"{Colors.RED}✗ Invalid number{Colors.END}")
-        except ValueError:
-            print(f"{Colors.RED}✗ Invalid input{Colors.END}")
+                    print(f"{Colors.RED}✗ Invalid number{Colors.END}")
+            except ValueError:
+                print(f"{Colors.RED}✗ Invalid input{Colors.END}")
+        else:
+            print(f"{Colors.RED}✗ Invalid action. Use 'e' for enable/disable, 'p' for password, or '0' to exit{Colors.END}")
 
     # Save disabled commands
     with open(disabled_config_path, 'w') as f:
@@ -588,6 +627,18 @@ def interactive_add_command():
     interactive_choice = safe_input(f"{Colors.CYAN}Enter choice (1-2) [1]: {Colors.END}").strip()
     is_interactive = interactive_choice == '2'
 
+    # Ask about password protection (v1.1.1)
+    print()
+    print(f"Does this command require password protection? (NEW in v1.1.1)")
+    print(f"  {Colors.YELLOW}Use this for commands that access sensitive resources{Colors.END}")
+    print(f"  {Colors.GREEN}1.{Colors.END} No (default)")
+    print(f"  {Colors.GREEN}2.{Colors.END} Yes (require CCMD master password)")
+    print()
+    sys.stdout.flush()
+
+    password_choice = safe_input(f"{Colors.CYAN}Enter choice (1-2) [1]: {Colors.END}").strip()
+    require_password = password_choice == '2'
+
     # Create command definition
     command_def = {
         'description': description,
@@ -597,6 +648,10 @@ def interactive_add_command():
 
     if is_interactive:
         command_def['interactive'] = True
+
+    if require_password:
+        command_def['require_password'] = True
+        print(f"{Colors.YELLOW}→ This command will require master password authentication{Colors.END}")
 
     # Add command
     try:

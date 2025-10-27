@@ -71,7 +71,10 @@ class CommandParser:
 
     def _requires_parameters(self, command_def: Dict[str, Any]) -> bool:
         """
-        Check if a command requires parameters
+        Check if a command requires parameters (FIXED v1.1.1)
+
+        Now uses regex to match only Python-style placeholders like {message}, {pid}
+        Ignores shell syntax like awk's {print} or bash's ${var}
 
         Args:
             command_def: Command definition
@@ -79,16 +82,36 @@ class CommandParser:
         Returns:
             True if command requires parameters
         """
+        import re
+
         action = command_def.get('action', '')
+
+        # Pattern matches Python placeholders: {word} but not {$var} or { }
+        python_placeholder_pattern = r'\{\w+\}'
 
         # Check if action contains parameter placeholders
         if isinstance(action, str):
-            return '{' in action and '}' in action
+            return bool(re.search(python_placeholder_pattern, action))
         elif isinstance(action, dict):
-            # Check if any action value contains placeholders
-            for value in action.values():
-                if isinstance(value, str) and '{' in value and '}' in value:
-                    return True
+            # Distinguish OS-specific dicts from subcommand dicts
+            # OS-specific: keys are 'linux', 'macos', 'windows'
+            # Subcommand: keys are actual subcommand names
+            os_keys = {'linux', 'macos', 'windows'}
+            dict_keys = set(action.keys())
+
+            # If all keys are OS names, this is OS-specific (like cpu, mem, proc)
+            # These should NOT be treated as requiring subcommands
+            if dict_keys.issubset(os_keys):
+                # Check if any OS-specific command has placeholders
+                for value in action.values():
+                    if isinstance(value, str) and re.search(python_placeholder_pattern, value):
+                        return True
+                return False
+            else:
+                # This is a subcommand dict (like 'go'), check for placeholders
+                for value in action.values():
+                    if isinstance(value, str) and re.search(python_placeholder_pattern, value):
+                        return True
 
         return False
 

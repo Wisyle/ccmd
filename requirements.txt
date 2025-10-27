@@ -8,3 +8,6 @@ questionary>=2.0.0
 
 # Git integration for smart push command
 GitPython>=3.1.0
+
+# Password hashing for v1.1.1 security features
+bcrypt>=4.0.0

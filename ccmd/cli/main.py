@@ -293,6 +293,12 @@ def main():
                        help='Update CCMD to latest version from GitHub')
     parser.add_argument('--debug', action='store_true',
                        help='Enable debug mode with verbose output')
+    parser.add_argument('--init', action='store_true',
+                       help='Initialize CCMD master password (v1.1.1)')
+    parser.add_argument('--change-password', action='store_true',
+                       help='Change the master password (requires current password)')
+    parser.add_argument('--reset-password', action='store_true',
+                       help='Reset (delete) master password - use if you forgot it')
     parser.add_argument('--exec', type=str,
                        help='Execute a raw command (internal use)')
 
@@ -309,7 +315,8 @@ def main():
     # Handle debug mode if no other command
     if args.debug and not any([args.install, args.uninstall, args.restore,
                                 args.check, args.edit, args.test, args.reload,
-                                args.list, args.version, args.update, args.exec, args.command]):
+                                args.list, args.version, args.update, args.init,
+                                args.change_password, args.reset_password, args.exec, args.command]):
         return handle_debug()
 
     # Handle management flags
@@ -333,6 +340,12 @@ def main():
         return handle_reload()
     elif args.list:
         return handle_list()
+    elif args.init:
+        return handle_init()
+    elif args.change_password:
+        return handle_change_password()
+    elif args.reset_password:
+        return handle_reset_password()
     elif args.exec:
         return handle_exec(args.exec)
 
@@ -749,6 +762,84 @@ def handle_debug():
     return 0
 
 
+def handle_init():
+    """Initialize CCMD master password (v1.1.1)"""
+    from ccmd.core.auth import initialize_password_interactive, HAS_BCRYPT
+
+    if not HAS_BCRYPT:
+        print(f"{Colors.RED}✗ bcrypt not installed{Colors.END}")
+        print(f"{Colors.YELLOW}→ Install with: pip install bcrypt{Colors.END}")
+        return 1
+
+    print()
+    print(f"{Colors.BOLD}{Colors.CYAN}=== Initialize CCMD Master Password ==={Colors.END}")
+    print()
+
+    success, message = initialize_password_interactive()
+
+    if success:
+        print()
+        print(f"{Colors.GREEN}✓ {message}{Colors.END}")
+        print()
+        print(f"{Colors.CYAN}Your master password is now active!{Colors.END}")
+        print(f"{Colors.CYAN}It will protect sensitive commands like SSH and sudo.{Colors.END}")
+        print()
+        return 0
+    else:
+        print()
+        print(f"{Colors.RED}✗ {message}{Colors.END}")
+        print()
+        return 1
+
+
+def handle_change_password():
+    """Change the master password"""
+    from ccmd.core.auth import change_password_interactive, HAS_BCRYPT
+
+    if not HAS_BCRYPT:
+        print(f"{Colors.RED}✗ bcrypt not installed{Colors.END}")
+        print(f"{Colors.YELLOW}→ Install with: pip install bcrypt{Colors.END}")
+        return 1
+
+    success, message = change_password_interactive()
+
+    if success:
+        print()
+        print(f"{Colors.GREEN}✓ {message}{Colors.END}")
+        print()
+        return 0
+    else:
+        print()
+        print(f"{Colors.RED}✗ {message}{Colors.END}")
+        print()
+        return 1
+
+
+def handle_reset_password():
+    """Reset (delete) master password"""
+    from ccmd.core.auth import reset_password_interactive, HAS_BCRYPT
+
+    if not HAS_BCRYPT:
+        print(f"{Colors.RED}✗ bcrypt not installed{Colors.END}")
+        print(f"{Colors.YELLOW}→ Install with: pip install bcrypt{Colors.END}")
+        return 1
+
+    success, message = reset_password_interactive()
+
+    if success:
+        print()
+        print(f"{Colors.GREEN}✓ {message}{Colors.END}")
+        print()
+        print(f"{Colors.YELLOW}→ Run 'python3 run.py --init' to set a new password{Colors.END}")
+        print()
+        return 0
+    else:
+        print()
+        print(f"{Colors.RED}✗ {message}{Colors.END}")
+        print()
+        return 1
+
+
 def handle_hi():
     """Display personalized dashboard with system overview"""
     username = get_username()
@@ -964,9 +1055,21 @@ def handle_command(command_name: str, args: list):
         if cmd_name in action_descriptions:
             show_command_feedback(cmd_name, action_descriptions[cmd_name])
 
-    # Execute command
-    debug_print("Executing command...")
-    returncode, stdout, stderr = executor.execute(formatted_action)
+    # Execute command with security (v1.1.1 - password protection for sensitive commands)
+    debug_print("Executing command with security checks...")
+
+    # Get command definition for security checks
+    cmd_def = registry.get_command(cmd_name)
+
+    # Check if command is interactive (needs terminal I/O)
+    is_interactive = cmd_def.get('interactive', False) if cmd_def else False
+
+    # Use secure execution with password protection
+    returncode, stdout, stderr = executor.execute_with_security(
+        formatted_action,
+        command_def=cmd_def,
+        interactive=is_interactive
+    )
     debug_print(f"Return code: {returncode}")
 
     CommandOutput.print_command_output(stdout, stderr)
