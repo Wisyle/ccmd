@@ -374,6 +374,6 @@ Free to use, modify, and distribute.
 
 ---
 
-```
-Always check new releases before downloading 
----
+
+## Always check new releases before downloading 
+
