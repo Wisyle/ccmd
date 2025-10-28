@@ -132,6 +132,18 @@ class CommandRegistry:
             return self.custom_commands.get(name)
         return self.commands.get(name)
 
+    def has_command(self, name: str) -> bool:
+        """
+        Check if a command exists (v1.1.2 - for command composability)
+
+        Args:
+            name: Command name
+
+        Returns:
+            True if command exists (in custom or default commands)
+        """
+        return name in self.custom_commands or name in self.commands
+
     def add_command(self, name: str, command_def: Dict[str, Any], is_custom: bool = False):
         """
         Add or update a command definition (v1.1.2 - Security hardened)

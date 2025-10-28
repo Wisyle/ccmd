@@ -107,11 +107,158 @@ class CommandExecutor:
             # Predefined system commands can use shell for pipes/redirects
             allow_shell = True
 
-        # Step 6: Execute command
+        # Step 6: Execute command (check for chaining first - v1.1.2)
+        if '>>>' in command:
+            return self.execute_chained_commands(command, command_def, interactive)
+
         try:
             return self.execute(command, interactive=interactive, shell=allow_shell)
         except KeyboardInterrupt:
             return 1, "", "\n→ Operation cancelled"
+
+    def execute_chained_commands(self, command_string: str, command_def: Optional[Dict[str, Any]] = None,
+                                 interactive: bool = False, _depth: int = 0) -> Tuple[int, str, str]:
+        """
+        Execute commands chained with >>> operator (v1.1.2 - Command Composability)
+
+        Features:
+        - Each part can be a CCMD command OR shell command
+        - CCMD commands executed through internal method
+        - Shell commands executed with execute_with_security()
+        - Special handling for 'go' to actually change directory
+        - Recursion guard to prevent infinite loops
+
+        Args:
+            command_string: Command string with >>> separators
+            command_def: Command definition dict
+            interactive: Whether commands need interactive terminal
+            _depth: Recursion depth (internal, prevents infinite loops)
+
+        Returns:
+            Tuple of (return_code, stdout, stderr)
+        """
+        # Recursion guard - max depth 10
+        if _depth > 10:
+            return 1, "", "Error: Maximum command chain depth exceeded (possible infinite loop)"
+
+        # Split on >>> separator
+        parts = [p.strip() for p in command_string.split('>>>')]
+
+        # Validate each part individually
+        for part in parts:
+            # Parse to check if it's a CCMD command
+            cmd_parts = part.split()
+            if not cmd_parts:
+                continue
+
+            cmd_name = cmd_parts[0]
+
+            # Get registry to check if this is a CCMD command
+            from ccmd.core.registry import CommandRegistry
+            registry = CommandRegistry()
+
+            # If it's NOT a CCMD command, validate it as shell command
+            if not registry.has_command(cmd_name):
+                # Custom commands can use chaining operators
+                allow_chaining = command_def and command_def.get('type') == 'custom'
+                is_valid, error = self.validate_command(part, allow_chaining=allow_chaining)
+                if not is_valid:
+                    return 1, "", f"Invalid command in chain: {error}"
+
+        # Execute in sequence
+        all_stdout = []
+        all_stderr = []
+        current_dir = os.getcwd()  # Save for restoration
+
+        try:
+            for i, part in enumerate(parts):
+                print(f"→ Step {i+1}/{len(parts)}: {part}", file=sys.stderr)
+
+                # Parse command name and arguments
+                cmd_parts = part.split()
+                cmd_name = cmd_parts[0]
+                cmd_args = cmd_parts[1:] if len(cmd_parts) > 1 else []
+
+                # Get registry
+                from ccmd.core.registry import CommandRegistry
+                registry = CommandRegistry()
+
+                # Check if this is a CCMD command
+                if registry.has_command(cmd_name):
+                    # Execute CCMD command (allows command composability!)
+                    print(f"  (executing CCMD command: {cmd_name})", file=sys.stderr)
+
+                    returncode, stdout, stderr = self._execute_ccmd_command(
+                        cmd_name, cmd_args, registry, _depth + 1
+                    )
+
+                    # Special handling for 'go' command - actually change directory
+                    if cmd_name == 'go' and returncode == 0:
+                        if stdout.startswith('cd '):
+                            target_dir = stdout.replace('cd ', '').strip()
+                            try:
+                                os.chdir(target_dir)
+                                print(f"  (changed directory to: {target_dir})", file=sys.stderr)
+                            except Exception as e:
+                                return 1, '', f"Failed to change directory: {e}"
+                else:
+                    # Regular shell command
+                    returncode, stdout, stderr = self.execute_with_security(part, command_def, interactive)
+
+                all_stdout.append(stdout)
+                all_stderr.append(stderr)
+
+                if returncode != 0:
+                    print(f"✗ Step {i+1} failed with code {returncode}", file=sys.stderr)
+                    return returncode, '\n'.join(all_stdout), '\n'.join(all_stderr)
+
+                print(f"✓ Step {i+1} completed", file=sys.stderr)
+
+            return 0, '\n'.join(all_stdout), '\n'.join(all_stderr)
+
+        finally:
+            # Always restore original directory
+            os.chdir(current_dir)
+
+    def _execute_ccmd_command(self, cmd_name: str, cmd_args: list, registry,
+                             depth: int) -> Tuple[int, str, str]:
+        """
+        Execute a CCMD command programmatically (v1.1.2 - Internal use)
+
+        Args:
+            cmd_name: Command name
+            cmd_args: Command arguments
+            registry: CommandRegistry instance
+            depth: Recursion depth
+
+        Returns:
+            Tuple of (return_code, stdout, stderr)
+        """
+        from ccmd.core.parser import CommandParser
+
+        # Get command definition
+        cmd_def = registry.get_command(cmd_name)
+        if not cmd_def:
+            return 1, "", f"Command not found: {cmd_name}"
+
+        # Parse and format the command
+        parser = CommandParser(registry)
+        _, _, parameters = parser.parse([cmd_name] + cmd_args)
+
+        if 'error' in parameters:
+            return 1, "", parameters['error']
+
+        # Format the action
+        formatted_action = parser.format_action(cmd_name, parameters)
+
+        # Check if this command also has chaining (recursive)
+        if '>>>' in formatted_action:
+            return self.execute_chained_commands(formatted_action, cmd_def, False, depth)
+        else:
+            # Execute normally (but skip chaining check to avoid recursion)
+            is_interactive = cmd_def.get('interactive', False)
+            allow_shell = cmd_def.get('type') in ['system', 'internal']
+            return self.execute(formatted_action, interactive=is_interactive, shell=allow_shell)
 
     def execute(self, command: str, interactive: bool = False,
                 shell: bool = False) -> Tuple[int, str, str]:
