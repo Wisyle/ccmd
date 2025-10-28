@@ -9,11 +9,13 @@
 > Replace long, repetitive terminal syntax with short, intuitive commands.
 > Works on **Linux**, **Windows PowerShell**, and **WSL** — safe, rollback-ready, and open source.
 
-> **🔐 New in v1.1.1:** Enterprise-grade security! Master password protection, command injection prevention, SSH key validation, and intelligent auto-locator.
+> **🔗 New in v1.1.2:** Command Chaining & Composability! Chain commands with `>>>`, enhanced security, and process management.
+
+> **🔐 v1.1.1:** Enterprise-grade security! Master password protection, command injection prevention, SSH key validation, and intelligent auto-locator.
 
 > **⚠️ Important:** CCMD is a powerful tool that sits between your shell and you. Like electricity or any powerful tool, **it can be dangerous if used wrongly**. Please read the [Security Disclaimer](SECURITY_DISCLAIMER.md) before using CCMD. Use carefully, cautiously, and responsibly.
 
-> **📌 Version Notice:** We **strongly recommend using v1.1.1 or later**. Older versions (v1.0.x, v1.1.0) lack critical security features and bug fixes. They will continue to work but are no longer supported with security updates. [Upgrade now](https://github.com/Wisyle/ccmd/releases/latest) — it's safe, fast, and backward compatible!
+> **📌 Version Notice:** We **strongly recommend using v1.1.2 or later**. Older versions (v1.0.x, v1.1.0, v1.1.1) lack the latest security fixes and features. They will continue to work but are no longer supported with security updates. [Upgrade now](https://github.com/Wisyle/ccmd/releases/latest) — it's safe, fast, and backward compatible!
 
 ---
 
@@ -43,7 +45,18 @@ CCMD handles the rest. It safely installs into your shell profile, manages custo
 
 ## ✨ Features
 
-### 🔐 v1.1.1 Security Features (NEW!)
+### 🔗 v1.1.2 Features (NEW!)
+* **🔗 Command Chaining** — Chain commands with `>>>` operator: `go downloads >>> ls >>> echo "done"`
+* **🔄 Command Composability** — CCMD commands can call other CCMD commands
+* **🎯 Smart Directory Chaining** — Directory changes persist through command chains
+* **🛡️ Enhanced Security** — Context-aware validation, expanded pattern detection (40+ patterns)
+* **💀 Process Management** — `kap` kills all processes (with confirmation), `kp` kills by name
+* **🔐 bcrypt Fallback** — PBKDF2-HMAC-SHA256 fallback if bcrypt unavailable
+* **🔒 Type Enforcement** — Custom commands cannot abuse privileged types
+
+**Example:** `ccmd add` → name: `devwork` → command: `go projects >>> ls >>> echo "Ready to code!"`
+
+### 🔐 v1.1.1 Security Features
 * **🔒 Master Password System** — Protect sensitive commands with bcrypt-hashed passwords
 * **🛡️ Command Injection Prevention** — Automatic blocking of dangerous command patterns
 * **🔐 SSH Key Validation** — Verify key permissions (0600) before use
@@ -53,7 +66,7 @@ CCMD handles the rest. It safely installs into your shell profile, manages custo
 * **📊 Audit Logging** — Track all authentication attempts
 * **⚡ Security Cache** — 5-minute authentication window for convenience
 
-**New Commands:** `init`, `debug`, `sudo`, `change-password`, `reset-password`
+**New Commands:** `init`, `debug`, `sudo`, `change-password`, `reset-password`, `kap`, `kp`
 
 ### 🆕 v1.1.0 Features
 * **✨ Custom Commands** — Create your own commands with `add`, manage with `remove`
