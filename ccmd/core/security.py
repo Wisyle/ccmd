@@ -55,13 +55,29 @@ class CommandSecurityValidator:
         r'>>\s*/etc/shadow',   # Append to shadow
     ]
 
+    # Patterns that are ONLY dangerous with shell=True
+    # (harmless with shell=False since they're treated as literal text)
+    SHELL_ONLY_PATTERNS = [
+        r'`.*`',               # Backticks (command substitution)
+        r'\$\(.*\)',           # $() command substitution
+        r'&&\s*[^\s]',         # AND chaining
+        r'\|\|\s*[^\s]',       # OR chaining
+        r';\s*[^\s]',          # Semicolon chaining
+        r'\|\s*(python|python3|perl|ruby|node)',  # Pipe to interpreter
+        r'curl.*\|\s*bash',    # Pipe to bash
+        r'wget.*\|\s*sh',      # Pipe to shell
+        r'fetch.*\|\s*sh',     # Pipe to shell
+    ]
+
     @classmethod
-    def validate_command(cls, command: str) -> Tuple[bool, Optional[str]]:
+    def validate_command(cls, command: str, allow_chaining: bool = False) -> Tuple[bool, Optional[str]]:
         """
-        Validate a command for security issues
+        Validate a command for security issues (v1.1.2 - Context-aware)
 
         Args:
             command: Command string to validate
+            allow_chaining: If True, allow shell operators (&&, ||, ;, pipes, etc.)
+                           Set to True for custom commands (they use shell=False anyway)
 
         Returns:
             Tuple of (is_valid, error_message)
@@ -69,14 +85,21 @@ class CommandSecurityValidator:
         if not command or not command.strip():
             return False, "Empty command"
 
-        # Check for dangerous patterns
-        for pattern in cls.DANGEROUS_PATTERNS:
-            if re.search(pattern, command, re.IGNORECASE):
-                return False, f"Command contains dangerous pattern: {pattern}"
-
         # Check for null bytes (command injection attempt)
         if '\0' in command:
             return False, "Command contains null bytes"
+
+        # Determine which patterns to check
+        patterns_to_check = cls.DANGEROUS_PATTERNS.copy()
+
+        if allow_chaining:
+            # Remove shell-only patterns (they're harmless with shell=False)
+            patterns_to_check = [p for p in patterns_to_check if p not in cls.SHELL_ONLY_PATTERNS]
+
+        # Check for dangerous patterns
+        for pattern in patterns_to_check:
+            if re.search(pattern, command, re.IGNORECASE):
+                return False, f"Command contains dangerous pattern: {pattern}"
 
         return True, None
 

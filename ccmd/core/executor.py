@@ -37,17 +37,18 @@ class CommandExecutor:
         self.validator = CommandSecurityValidator()
         self.subprocess_runner = SecureSubprocess()
 
-    def validate_command(self, command: str) -> Tuple[bool, Optional[str]]:
+    def validate_command(self, command: str, allow_chaining: bool = False) -> Tuple[bool, Optional[str]]:
         """
-        Validate a command for safety using security module
+        Validate a command for safety using security module (v1.1.2 - context-aware)
 
         Args:
             command: Command string to validate
+            allow_chaining: If True, allow shell operators (&&, ||, ;) - for custom commands
 
         Returns:
             Tuple of (is_valid, error_message)
         """
-        return self.validator.validate_command(command)
+        return self.validator.validate_command(command, allow_chaining=allow_chaining)
 
     def execute_with_security(self, command: str, command_def: Optional[Dict[str, Any]] = None,
                              interactive: bool = False) -> Tuple[int, str, str]:
@@ -62,8 +63,10 @@ class CommandExecutor:
         Returns:
             Tuple of (return_code, stdout, stderr)
         """
-        # Step 1: Validate command syntax
-        is_valid, error = self.validate_command(command)
+        # Step 1: Validate command syntax (v1.1.2 - context-aware)
+        # Custom commands can use chaining operators since they run with shell=False
+        allow_chaining = command_def and command_def.get('type') == 'custom'
+        is_valid, error = self.validate_command(command, allow_chaining=allow_chaining)
         if not is_valid:
             return 1, "", f"Command validation failed: {error}"
 
