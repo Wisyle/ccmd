@@ -168,60 +168,72 @@ class CommandExecutor:
         # Execute in sequence
         all_stdout = []
         all_stderr = []
-        current_dir = os.getcwd()  # Save for restoration
 
-        try:
-            for i, part in enumerate(parts):
-                print(f"→ Step {i+1}/{len(parts)}: {part}", file=sys.stderr)
+        for i, part in enumerate(parts):
+            print(f"→ Step {i+1}/{len(parts)}: {part}", file=sys.stderr)
 
-                # Parse command name and arguments
-                cmd_parts = part.split()
-                cmd_name = cmd_parts[0]
-                cmd_args = cmd_parts[1:] if len(cmd_parts) > 1 else []
+            # Parse command name and arguments
+            cmd_parts = part.split()
+            cmd_name = cmd_parts[0]
+            cmd_args = cmd_parts[1:] if len(cmd_parts) > 1 else []
 
-                # Get registry
-                from ccmd.core.registry import CommandRegistry
-                registry = CommandRegistry()
+            # Get registry
+            from ccmd.core.registry import CommandRegistry
+            registry = CommandRegistry()
 
-                # Check if this is a CCMD command
-                if registry.has_command(cmd_name):
-                    # Execute CCMD command (allows command composability!)
-                    print(f"  (executing CCMD command: {cmd_name})", file=sys.stderr)
+            # Check if this is a CCMD command
+            if registry.has_command(cmd_name):
+                # Execute CCMD command (allows command composability!)
+                print(f"  (executing CCMD command: {cmd_name})", file=sys.stderr)
 
-                    returncode, stdout, stderr = self._execute_ccmd_command(
-                        cmd_name, cmd_args, registry, _depth + 1
+                returncode, stdout, stderr = self._execute_ccmd_command(
+                    cmd_name, cmd_args, registry, _depth + 1
+                )
+
+                # Special handling for 'go' command - actually change directory
+                if cmd_name == 'go' and returncode == 0:
+                    if stdout.startswith('cd '):
+                        target_dir = stdout.replace('cd ', '').strip()
+                        # Expand ~ to home directory and environment variables
+                        target_dir = os.path.expanduser(target_dir)
+                        target_dir = os.path.expandvars(target_dir)
+                        try:
+                            os.chdir(target_dir)
+                            print(f"  (changed directory to: {target_dir})", file=sys.stderr)
+                        except Exception as e:
+                            return 1, '', f"Failed to change directory: {e}"
+            else:
+                # Regular shell command - run without capturing output for better UX
+                # This allows interactive commands to show their output in real-time
+                try:
+                    cmd_parts = self.subprocess_runner.parse_shell_command(part)
+                    result = subprocess.run(
+                        cmd_parts,
+                        shell=False,  # SECURITY: Never use shell=True for user commands
+                        stdin=None,   # Inherit from parent
+                        stdout=None,  # Inherit - shows output in real-time
+                        stderr=None,  # Inherit - shows errors in real-time
+                        timeout=180
                     )
+                    returncode = result.returncode
+                    stdout, stderr = "", ""
+                except subprocess.TimeoutExpired:
+                    print("Command timed out after 180 seconds", file=sys.stderr)
+                    return 1, '\n'.join(all_stdout), "Command timed out"
+                except Exception as e:
+                    print(f"Execution error: {e}", file=sys.stderr)
+                    return 1, '\n'.join(all_stdout), str(e)
 
-                    # Special handling for 'go' command - actually change directory
-                    if cmd_name == 'go' and returncode == 0:
-                        if stdout.startswith('cd '):
-                            target_dir = stdout.replace('cd ', '').strip()
-                            # Expand ~ to home directory and environment variables
-                            target_dir = os.path.expanduser(target_dir)
-                            target_dir = os.path.expandvars(target_dir)
-                            try:
-                                os.chdir(target_dir)
-                                print(f"  (changed directory to: {target_dir})", file=sys.stderr)
-                            except Exception as e:
-                                return 1, '', f"Failed to change directory: {e}"
-                else:
-                    # Regular shell command
-                    returncode, stdout, stderr = self.execute_with_security(part, command_def, interactive)
+            all_stdout.append(stdout)
+            all_stderr.append(stderr)
 
-                all_stdout.append(stdout)
-                all_stderr.append(stderr)
+            if returncode != 0:
+                print(f"✗ Step {i+1} failed with code {returncode}", file=sys.stderr)
+                return returncode, '\n'.join(all_stdout), '\n'.join(all_stderr)
 
-                if returncode != 0:
-                    print(f"✗ Step {i+1} failed with code {returncode}", file=sys.stderr)
-                    return returncode, '\n'.join(all_stdout), '\n'.join(all_stderr)
+            print(f"✓ Step {i+1} completed", file=sys.stderr)
 
-                print(f"✓ Step {i+1} completed", file=sys.stderr)
-
-            return 0, '\n'.join(all_stdout), '\n'.join(all_stderr)
-
-        finally:
-            # Always restore original directory
-            os.chdir(current_dir)
+        return 0, '\n'.join(all_stdout), '\n'.join(all_stderr)
 
     def _execute_ccmd_command(self, cmd_name: str, cmd_args: list, registry,
                              depth: int) -> Tuple[int, str, str]:
@@ -312,7 +324,7 @@ class CommandExecutor:
                         shell=True,
                         capture_output=True,
                         text=True,
-                        timeout=30
+                        timeout=180  # Increased from 30 to 180 seconds for slow commands
                     )
                     return result.returncode, result.stdout, result.stderr
                 else:
@@ -320,7 +332,7 @@ class CommandExecutor:
                     cmd_parts = self.subprocess_runner.parse_shell_command(command)
                     return self.subprocess_runner.run_command_safe(
                         cmd_parts,
-                        timeout=30,
+                        timeout=180,  # Increased from 30 to 180 seconds for slow commands
                         capture_output=True
                     )
 
@@ -426,7 +438,7 @@ class CommandExecutor:
                 stdin=None,   # Inherit from parent (connected to terminal)
                 stdout=None,  # Inherit from parent (connected to terminal)
                 stderr=None,  # Inherit from parent (connected to terminal)
-                timeout=30
+                timeout=180  # Increased from 30 to 180 seconds for slow commands
             )
             return result.returncode, "", ""
 

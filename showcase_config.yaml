@@ -1,0 +1,139 @@
+# CCMD Showcase Configuration
+# This file defines what features to display in showcase.py
+# Update this file when releasing new versions
+
+version: "1.1.2"
+release_date: "October 28, 2025"
+subtitle: "Command Chaining & Security Hardening"
+
+# Main feature sections
+sections:
+  - title: "Command Chaining & Composability"
+    emoji: "🔗"
+    features:
+      - icon: "⚡"
+        title: "Chain Commands with >>>"
+        description: "Combine multiple commands into powerful workflows"
+        example: "go downloads >>> ls >>> echo 'Done!'"
+
+      - icon: "🔄"
+        title: "Command Composability"
+        description: "CCMD commands can call other CCMD commands"
+        example: "go home >>> go projects >>> pwd"
+
+      - icon: "🎯"
+        title: "Smart Directory Chaining"
+        description: "Directory changes persist through the chain"
+        example: "go downloads >>> ls (lists files in Downloads)"
+
+      - icon: "🛡️"
+        title: "Recursion Guard"
+        description: "Maximum depth of 10 prevents infinite loops"
+        example: "Automatic protection against circular chains"
+
+  - title: "Command Demonstrations"
+    emoji: "💻"
+    type: "commands"
+    items:
+      - command: "go downloads >>> ls >>> echo 'Files listed!'"
+        description: "Navigate to Downloads, list files, print message"
+
+      - command: "go home >>> go projects >>> pwd"
+        description: "Navigate home, then to projects, show current directory"
+
+      - command: "ccmd add → name: devwork → command: go projects >>> ls"
+        description: "Create custom command that chains navigation and listing"
+
+  - title: "Process Management"
+    emoji: "💀"
+    features:
+      - icon: "🔴"
+        title: "kap — Kill All Processes"
+        description: "Kills ALL user processes with password protection and confirmation"
+        example: "kap (requires password + 'yes' confirmation)"
+
+      - icon: "🎯"
+        title: "kp — Kill Process by Name"
+        description: "Kill specific processes by name"
+        example: "kp bash, kp python3, kp node"
+
+  - title: "Security Hardening (4 Critical Fixes)"
+    emoji: "🛡️"
+    type: "security"
+    items:
+      - number: 1
+        title: "bcrypt Bypass Vulnerability"
+        description: "Added PBKDF2-HMAC-SHA256 fallback (100k iterations) — Never bypasses auth"
+
+      - number: 2
+        title: "Custom Command Type Abuse"
+        description: "Force all custom commands to type='custom' — Prevents shell=True bypass"
+
+      - number: 3
+        title: "Incomplete Sensitive Detection"
+        description: "Expanded from 17 to 40+ patterns — Cloud, DB, API keys detected"
+
+      - number: 4
+        title: "Command Chaining Bypass"
+        description: "Expanded from 6 to 35+ patterns — Context-aware validation added"
+
+  - title: "Technical Improvements"
+    emoji: "🔧"
+    type: "improvements"
+    items:
+      - title: "Context-Aware Validation"
+        description: "Strict for system, relaxed for custom"
+
+      - title: "Path Expansion"
+        description: "~ and $VAR properly expanded"
+
+      - title: "Error Handling"
+        description: "Chain stops on first failure"
+
+      - title: "Step Feedback"
+        description: "Real-time execution progress"
+
+      - title: "Type Enforcement"
+        description: "Custom commands can't abuse privileges"
+
+# Release statistics
+statistics:
+  - label: "Commits"
+    value: "9"
+    color: "green"
+
+  - label: "Files Changed"
+    value: "11"
+    color: "blue"
+
+  - label: "Lines Added"
+    value: "1,620+"
+    color: "magenta"
+
+  - label: "Security Fixes"
+    value: "4 Critical"
+    color: "red"
+
+  - label: "New Features"
+    value: "3 Major"
+    color: "yellow"
+
+  - label: "Tests Passed"
+    value: "8/8 (100%)"
+    color: "green"
+
+# Footer information
+footer:
+  badges:
+    - text: "All Tests Passed (8/8)"
+    - text: "Production Ready"
+    - text: "Backward Compatible"
+
+  links:
+    download: "https://github.com/Wisyle/ccmd/releases/tag/v1.1.2"
+    docs: "https://github.com/Wisyle/ccmd"
+
+  credits:
+    developer: "De Catalyst (@Wisyle)"
+    license: "MIT License"
+    warning: "Use carefully, cautiously, and responsibly."
