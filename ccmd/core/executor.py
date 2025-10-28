@@ -196,6 +196,9 @@ class CommandExecutor:
                     if cmd_name == 'go' and returncode == 0:
                         if stdout.startswith('cd '):
                             target_dir = stdout.replace('cd ', '').strip()
+                            # Expand ~ to home directory and environment variables
+                            target_dir = os.path.expanduser(target_dir)
+                            target_dir = os.path.expandvars(target_dir)
                             try:
                                 os.chdir(target_dir)
                                 print(f"  (changed directory to: {target_dir})", file=sys.stderr)
@@ -241,20 +244,32 @@ class CommandExecutor:
         if not cmd_def:
             return 1, "", f"Command not found: {cmd_name}"
 
-        # Parse and format the command
+        # Parse the command
         parser = CommandParser(registry)
-        _, _, parameters = parser.parse([cmd_name] + cmd_args)
+        _, subcommand, parameters = parser.parse([cmd_name] + cmd_args)
 
         if 'error' in parameters:
             return 1, "", parameters['error']
 
-        # Format the action
-        formatted_action = parser.format_action(cmd_name, parameters)
+        # Get the action (using subcommand and os_type)
+        os_type = self.system_info.os_type if self.system_info else None
+        action = parser.get_action(cmd_name, subcommand, os_type)
+
+        if not action:
+            return 1, "", f"No action defined for command: {cmd_name}"
+
+        # Format the action with parameters
+        formatted_action = parser.format_action(action, parameters)
 
         # Check if this command also has chaining (recursive)
         if '>>>' in formatted_action:
             return self.execute_chained_commands(formatted_action, cmd_def, False, depth)
         else:
+            # Special handling for navigation commands (cd)
+            if formatted_action.startswith('cd '):
+                # Return the cd command in stdout for our special handler to process
+                return 0, formatted_action, ""
+
             # Execute normally (but skip chaining check to avoid recursion)
             is_interactive = cmd_def.get('interactive', False)
             allow_shell = cmd_def.get('type') in ['system', 'internal']
