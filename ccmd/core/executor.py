@@ -207,13 +207,18 @@ class CommandExecutor:
                 # This allows interactive commands to show their output in real-time
                 try:
                     cmd_parts = self.subprocess_runner.parse_shell_command(part)
+
+                    # For interactive commands, don't apply timeout (they might run indefinitely)
+                    is_interactive = command_def and command_def.get('interactive', False)
+                    timeout_value = None if is_interactive else 180
+
                     result = subprocess.run(
                         cmd_parts,
                         shell=False,  # SECURITY: Never use shell=True for user commands
                         stdin=None,   # Inherit from parent
                         stdout=None,  # Inherit - shows output in real-time
                         stderr=None,  # Inherit - shows errors in real-time
-                        timeout=180
+                        timeout=timeout_value
                     )
                     returncode = result.returncode
                     stdout, stderr = "", ""
@@ -431,6 +436,7 @@ class CommandExecutor:
 
             # For other interactive commands, parse safely and run without shell=True
             # IMPORTANT: Explicitly inherit stdin/stdout/stderr for interactive input
+            # NOTE: No timeout for interactive commands (they run as long as user needs)
             cmd_parts = self.subprocess_runner.parse_shell_command(command)
             result = subprocess.run(
                 cmd_parts,
@@ -438,7 +444,7 @@ class CommandExecutor:
                 stdin=None,   # Inherit from parent (connected to terminal)
                 stdout=None,  # Inherit from parent (connected to terminal)
                 stderr=None,  # Inherit from parent (connected to terminal)
-                timeout=180  # Increased from 30 to 180 seconds for slow commands
+                timeout=None  # No timeout for interactive commands
             )
             return result.returncode, "", ""
 
