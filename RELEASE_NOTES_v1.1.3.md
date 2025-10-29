@@ -209,8 +209,6 @@ This release was thoroughly tested with:
 - ✅ Custom command creation and management
 - ✅ Edge cases (empty chains, special characters, timeout limits)
 
-See full test results: `/mnt/c/Users/rober/targlobal/ccmd-notes/v1.1.3-TEST-PLAN.md`
-
 ---
 
 ## Security
