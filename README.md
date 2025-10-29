@@ -9,13 +9,15 @@
 > Replace long, repetitive terminal syntax with short, intuitive commands.
 > Works on **Linux**, **Windows PowerShell**, and **WSL** — safe, rollback-ready, and open source.
 
-> **🔗 New in v1.1.2:** Command Chaining & Composability! Chain commands with `>>>`, enhanced security, and process management.
+> **✨ New in v1.1.3:** Bug Fix Release! Fixed command chaining directory persistence, interactive timeout issues, and pip install warnings.
+
+> **🔗 v1.1.2:** Command Chaining & Composability! Chain commands with `>>>`, enhanced security, and process management.
 
 > **🔐 v1.1.1:** Enterprise-grade security! Master password protection, command injection prevention, SSH key validation, and intelligent auto-locator.
 
 > **⚠️ Important:** CCMD is a powerful tool that sits between your shell and you. Like electricity or any powerful tool, **it can be dangerous if used wrongly**. Please read the [Security Disclaimer](SECURITY_DISCLAIMER.md) before using CCMD. Use carefully, cautiously, and responsibly.
 
-> **📌 Version Notice:** We **strongly recommend using v1.1.2 or later**. Older versions (v1.0.x, v1.1.0, v1.1.1) lack the latest security fixes and features. They will continue to work but are no longer supported with security updates. [Upgrade now](https://github.com/Wisyle/ccmd/releases/latest) — it's safe, fast, and backward compatible!
+> **📌 Version Notice:** We **strongly recommend using v1.1.3 or later**. Older versions (v1.0.x, v1.1.0-v1.1.2) may have bugs affecting command chaining and interactive commands. [Upgrade now](https://github.com/Wisyle/ccmd/releases/latest) — it's safe, fast, and backward compatible!
 
 ---
 
@@ -45,7 +47,16 @@ CCMD handles the rest. It safely installs into your shell profile, manages custo
 
 ## ✨ Features
 
-### 🔗 v1.1.2 Features (NEW!)
+### 🐛 v1.1.3 Bug Fixes (LATEST!)
+* **🔧 Fixed Directory Persistence** — Chained commands now correctly persist directory changes
+* **⏱️ Fixed Interactive Timeouts** — Interactive commands like `claude` no longer timeout
+* **📦 Fixed Pip Install Warnings** — Automatic handling of externally-managed Python environments
+* **➕ Added lhs/lha Paths** — Navigate to project directories with `go lhs` and `go lha`
+* **🎯 180s Timeout for Non-Interactive** — Non-interactive commands timeout after 3 minutes (prevents hangs)
+
+**Upgrade Recommendation:** If you're using v1.1.2 command chaining, upgrade to v1.1.3 for critical bug fixes!
+
+### 🔗 v1.1.2 Features
 * **🔗 Command Chaining** — Chain commands with `>>>` operator: `go downloads >>> ls >>> echo "done"`
 * **🔄 Command Composability** — CCMD commands can call other CCMD commands
 * **🎯 Smart Directory Chaining** — Directory changes persist through command chains
@@ -95,6 +106,7 @@ CCMD handles the rest. It safely installs into your shell profile, manages custo
 For detailed guides and technical documentation, see:
 
 * **[🔐 Security Disclaimer](SECURITY_DISCLAIMER.md)** — **READ THIS FIRST!** Important security information and responsible use guidelines
+* **[📋 Release Notes v1.1.3](RELEASE_NOTES_v1.1.3.md)** — Latest bug fixes and improvements
 * **[📋 Release Notes v1.1.1](RELEASE_NOTES_v1.1.1.md)** — Complete changelog and upgrade guide
 * **[Features](FEATURES.md)** — Complete feature list including security features
 * **[Installation Guide](INSTALLATION.md)** — Step-by-step installation for all platforms
@@ -163,7 +175,7 @@ If you're not familiar with Git, download the official release:
 1. **Download the latest release:**
    - Visit: https://github.com/Wisyle/ccmd/releases/latest
    - Download **Source code (zip)** under Assets
-   - Or direct download: https://github.com/Wisyle/ccmd/archive/refs/tags/v1.1.0.zip
+   - Or direct download: https://github.com/Wisyle/ccmd/archive/refs/tags/v1.1.3.zip
 
 2. **Extract the files:**
    - Extract the downloaded ZIP file
