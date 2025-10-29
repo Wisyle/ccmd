@@ -19,7 +19,7 @@ sections:
       - icon: "⏱️"
         title: "Interactive Timeout Fixed"
         description: "Interactive commands like claude no longer timeout after 180s"
-        example: "go lhs >>> claude (runs indefinitely as expected)"
+        example: "go myproject >>> claude (runs indefinitely as expected)"
 
       - icon: "📦"
         title: "Pip Install Warnings Fixed"
@@ -30,9 +30,9 @@ sections:
     emoji: "✨"
     features:
       - icon: "➕"
-        title: "Added Project Navigation Paths"
-        description: "Built-in shortcuts for frequently-used project directories"
-        example: "go lhs, go lha (instant navigation)"
+        title: "Enhanced Custom Navigation"
+        description: "Support for user-defined project directory shortcuts"
+        example: "go myproject, go workspace (instant navigation)"
 
       - icon: "🎯"
         title: "Smarter Timeout Strategy"
@@ -46,7 +46,7 @@ sections:
       - command: "go home >>> pwd"
         description: "Navigate and stay in the directory (now works correctly)"
 
-      - command: "go lhs >>> claude"
+      - command: "go myproject >>> claude"
         description: "Navigate to project and start interactive session (no timeout)"
 
       - command: "go downloads >>> ls >>> echo 'Done!'"
@@ -82,7 +82,7 @@ sections:
         description: "Try regular install, fallback to --break-system-packages"
 
       - title: "Enhanced Path Support"
-        description: "Added lhs and lha project paths to go command"
+        description: "Support for custom project paths in go command"
 
       - title: "100% Backward Compatible"
         description: "No breaking changes, safe upgrade from v1.1.2"

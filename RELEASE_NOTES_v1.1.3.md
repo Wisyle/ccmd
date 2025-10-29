@@ -29,7 +29,7 @@ go home >>> pwd
 
 **Fix:** Removed the directory restoration logic in `ccmd/core/executor.py`. Directory changes now persist naturally through command chains.
 
-**Impact:** Command chaining now works as expected. Custom commands like `go lhs >>> claude` correctly navigate and stay in the target directory.
+**Impact:** Command chaining now works as expected. Custom commands like `go myproject >>> claude` correctly navigate and stay in the target directory.
 
 **Files Modified:** `ccmd/core/executor.py` (lines 168-218)
 
@@ -41,7 +41,7 @@ go home >>> pwd
 
 **Example of Bug:**
 ```bash
-lhsc  # Custom command: go lhs >>> claude
+myinteractive  # Custom command: go myproject >>> claude
 # Claude starts successfully but times out after 3 minutes
 ```
 
@@ -77,19 +77,20 @@ lhsc  # Custom command: go lhs >>> claude
 
 ---
 
-### ➕ Added Navigation Paths for Project Directories
+### ➕ Enhanced Navigation System
 
-**Enhancement:** Added built-in support for `go lhs` and `go lha` navigation shortcuts for user's project directories.
+**Enhancement:** Added support for custom project directory paths in the `go` command, allowing users to define frequently-accessed locations.
 
-**New Commands:**
+**Example Usage:**
 ```bash
-go lhs  # Navigate to /mnt/c/Users/rober/targlobal/LHS
-go lha  # Navigate to /mnt/c/Users/rober/targlobal/LHA
+# Users can add custom paths to commands.yaml
+go myproject   # Navigate to /path/to/your/project
+go workspace   # Navigate to /path/to/workspace
 ```
 
-**Impact:** Faster navigation to frequently-used project directories. Enables custom commands like `lhsc: go lhs >>> claude`.
+**Impact:** Faster navigation to frequently-used directories. Enables powerful custom commands like `go myproject >>> claude`.
 
-**Files Modified:** `commands.yaml` (lines 10-11)
+**Files Modified:** `commands.yaml` (navigation paths section)
 
 ---
 
@@ -116,7 +117,7 @@ go lha  # Navigate to /mnt/c/Users/rober/targlobal/LHA
 - Bumped version from `1.1.2` to `1.1.3`
 
 **`commands.yaml`**
-- Added `lhs` and `lha` paths to `go` command action dictionary
+- Enhanced support for custom project directory paths in `go` command
 
 **`ccmd/core/executor.py`**
 - Removed `finally` block that restored working directory after chain execution

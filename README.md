@@ -51,7 +51,7 @@ CCMD handles the rest. It safely installs into your shell profile, manages custo
 * **🔧 Fixed Directory Persistence** — Chained commands now correctly persist directory changes
 * **⏱️ Fixed Interactive Timeouts** — Interactive commands like `claude` no longer timeout
 * **📦 Fixed Pip Install Warnings** — Automatic handling of externally-managed Python environments
-* **➕ Added lhs/lha Paths** — Navigate to project directories with `go lhs` and `go lha`
+* **➕ Enhanced Navigation** — Support for custom project directory paths in `go` command
 * **🎯 180s Timeout for Non-Interactive** — Non-interactive commands timeout after 3 minutes (prevents hangs)
 
 **Upgrade Recommendation:** If you're using v1.1.2 command chaining, upgrade to v1.1.3 for critical bug fixes!

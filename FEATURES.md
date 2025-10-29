@@ -118,7 +118,7 @@ go ccmd        # → $CCMD_HOME
 
 # Smart search (finds directories in common locations)
 go myproject   # Searches and navigates to "myproject"
-go lha         # Finds and navigates to LHA directory
+go workspace   # Finds and navigates to workspace directory
 ```
 
 **Features (v1.1.0+):**
