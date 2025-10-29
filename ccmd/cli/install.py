@@ -44,6 +44,7 @@ def install_ccmd() -> Tuple[bool, str]:
     if requirements_file.exists():
         print("→ Installing Python dependencies...")
         try:
+            # First try regular pip install
             subprocess.run(
                 [sys.executable, "-m", "pip", "install", "-q", "-r", str(requirements_file)],
                 check=True,
@@ -51,8 +52,19 @@ def install_ccmd() -> Tuple[bool, str]:
             )
             print("✓ Dependencies installed successfully")
         except subprocess.CalledProcessError as e:
-            print(f"⚠ Warning: Failed to install dependencies: {e}")
-            print("  You may need to run: pip install -r requirements.txt")
+            # If regular install fails, try with --break-system-packages for externally-managed systems
+            try:
+                subprocess.run(
+                    [sys.executable, "-m", "pip", "install", "--break-system-packages", "-q", "-r", str(requirements_file)],
+                    check=True,
+                    capture_output=True
+                )
+                print("✓ Dependencies installed successfully")
+            except subprocess.CalledProcessError:
+                # If both attempts fail, show warning (dependencies might already be installed)
+                print(f"⚠ Warning: Could not install dependencies automatically")
+                print("  Dependencies may already be installed, or you may need to run:")
+                print(f"  pip3 install -r {requirements_file}")
 
     # Create default commands.yaml if it doesn't exist
     commands_yaml = install_dir / "commands.yaml"
