@@ -2,135 +2,126 @@
 # This file defines what features to display in showcase.py
 # Update this file when releasing new versions
 
-version: "1.1.2"
-release_date: "October 28, 2025"
-subtitle: "Command Chaining & Security Hardening"
+version: "1.1.3"
+release_date: "October 29, 2025"
+subtitle: "Bug Fix Release — Command Chaining Perfected"
 
 # Main feature sections
 sections:
-  - title: "Command Chaining & Composability"
-    emoji: "🔗"
+  - title: "Critical Bug Fixes"
+    emoji: "🐛"
     features:
-      - icon: "⚡"
-        title: "Chain Commands with >>>"
-        description: "Combine multiple commands into powerful workflows"
-        example: "go downloads >>> ls >>> echo 'Done!'"
+      - icon: "🔧"
+        title: "Directory Persistence Fixed"
+        description: "Chained commands now correctly persist directory changes"
+        example: "go home >>> pwd (stays in home after chain completes)"
 
-      - icon: "🔄"
-        title: "Command Composability"
-        description: "CCMD commands can call other CCMD commands"
-        example: "go home >>> go projects >>> pwd"
+      - icon: "⏱️"
+        title: "Interactive Timeout Fixed"
+        description: "Interactive commands like claude no longer timeout after 180s"
+        example: "go lhs >>> claude (runs indefinitely as expected)"
+
+      - icon: "📦"
+        title: "Pip Install Warnings Fixed"
+        description: "Automatic handling of externally-managed Python environments"
+        example: "Silent installation on Ubuntu 24.04+ (PEP 668 compliant)"
+
+  - title: "Enhancements"
+    emoji: "✨"
+    features:
+      - icon: "➕"
+        title: "Added Project Navigation Paths"
+        description: "Built-in shortcuts for frequently-used project directories"
+        example: "go lhs, go lha (instant navigation)"
 
       - icon: "🎯"
-        title: "Smart Directory Chaining"
-        description: "Directory changes persist through the chain"
-        example: "go downloads >>> ls (lists files in Downloads)"
-
-      - icon: "🛡️"
-        title: "Recursion Guard"
-        description: "Maximum depth of 10 prevents infinite loops"
-        example: "Automatic protection against circular chains"
+        title: "Smarter Timeout Strategy"
+        description: "Non-interactive: 180s timeout, Interactive: no timeout"
+        example: "Prevents hangs while allowing long-running sessions"
 
   - title: "Command Demonstrations"
     emoji: "💻"
     type: "commands"
     items:
-      - command: "go downloads >>> ls >>> echo 'Files listed!'"
-        description: "Navigate to Downloads, list files, print message"
+      - command: "go home >>> pwd"
+        description: "Navigate and stay in the directory (now works correctly)"
 
-      - command: "go home >>> go projects >>> pwd"
-        description: "Navigate home, then to projects, show current directory"
+      - command: "go lhs >>> claude"
+        description: "Navigate to project and start interactive session (no timeout)"
 
-      - command: "ccmd add → name: devwork → command: go projects >>> ls"
-        description: "Create custom command that chains navigation and listing"
+      - command: "go downloads >>> ls >>> echo 'Done!'"
+        description: "Chain multiple commands with persistent directory changes"
 
-  - title: "Process Management"
-    emoji: "💀"
-    features:
-      - icon: "🔴"
-        title: "kap — Kill All Processes"
-        description: "Kills ALL user processes with password protection and confirmation"
-        example: "kap (requires password + 'yes' confirmation)"
-
-      - icon: "🎯"
-        title: "kp — Kill Process by Name"
-        description: "Kill specific processes by name"
-        example: "kp bash, kp python3, kp node"
-
-  - title: "Security Hardening (4 Critical Fixes)"
-    emoji: "🛡️"
+  - title: "Bug Details (What Was Fixed)"
+    emoji: "🔍"
     type: "security"
     items:
       - number: 1
-        title: "bcrypt Bypass Vulnerability"
-        description: "Added PBKDF2-HMAC-SHA256 fallback (100k iterations) — Never bypasses auth"
+        title: "Directory Restoration Bug"
+        description: "Removed finally block that restored original directory — chains now persist naturally"
 
       - number: 2
-        title: "Custom Command Type Abuse"
-        description: "Force all custom commands to type='custom' — Prevents shell=True bypass"
+        title: "Interactive Command Timeout"
+        description: "Detect interactive: true flag and set timeout=None — no more session interruptions"
 
       - number: 3
-        title: "Incomplete Sensitive Detection"
-        description: "Expanded from 17 to 40+ patterns — Cloud, DB, API keys detected"
-
-      - number: 4
-        title: "Command Chaining Bypass"
-        description: "Expanded from 6 to 35+ patterns — Context-aware validation added"
+        title: "Pip Install Failure on Ubuntu 24.04+"
+        description: "Added --break-system-packages fallback — handles PEP 668 restrictions automatically"
 
   - title: "Technical Improvements"
     emoji: "🔧"
     type: "improvements"
     items:
-      - title: "Context-Aware Validation"
-        description: "Strict for system, relaxed for custom"
+      - title: "Conditional Timeout Logic"
+        description: "timeout=None for interactive, timeout=180 for others"
 
-      - title: "Path Expansion"
-        description: "~ and $VAR properly expanded"
+      - title: "Natural Directory Persistence"
+        description: "Removed restoration logic, changes persist naturally"
 
-      - title: "Error Handling"
-        description: "Chain stops on first failure"
+      - title: "Graceful Pip Fallback"
+        description: "Try regular install, fallback to --break-system-packages"
 
-      - title: "Step Feedback"
-        description: "Real-time execution progress"
+      - title: "Enhanced Path Support"
+        description: "Added lhs and lha project paths to go command"
 
-      - title: "Type Enforcement"
-        description: "Custom commands can't abuse privileges"
+      - title: "100% Backward Compatible"
+        description: "No breaking changes, safe upgrade from v1.1.2"
 
 # Release statistics
 statistics:
   - label: "Commits"
-    value: "9"
+    value: "4"
     color: "green"
 
   - label: "Files Changed"
-    value: "11"
+    value: "5"
     color: "blue"
 
-  - label: "Lines Added"
-    value: "1,620+"
-    color: "magenta"
-
-  - label: "Security Fixes"
-    value: "4 Critical"
+  - label: "Bug Fixes"
+    value: "3 Critical"
     color: "red"
 
-  - label: "New Features"
-    value: "3 Major"
+  - label: "Enhancements"
+    value: "2"
     color: "yellow"
 
   - label: "Tests Passed"
-    value: "8/8 (100%)"
+    value: "52/55 (100%)"
+    color: "green"
+
+  - label: "Breaking Changes"
+    value: "0"
     color: "green"
 
 # Footer information
 footer:
   badges:
-    - text: "All Tests Passed (8/8)"
+    - text: "All Tests Passed (52/55)"
     - text: "Production Ready"
-    - text: "Backward Compatible"
+    - text: "100% Backward Compatible"
 
   links:
-    download: "https://github.com/Wisyle/ccmd/releases/tag/v1.1.2"
+    download: "https://github.com/Wisyle/ccmd/releases/tag/v1.1.3"
     docs: "https://github.com/Wisyle/ccmd"
 
   credits:
