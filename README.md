@@ -129,6 +129,9 @@ For detailed guides and technical documentation, see:
 
 * **[🔐 Security Policy](SECURITY.md)** — **READ THIS FIRST!** Vulnerability reporting and security measures
 * **[📋 Security Changelog](SECURITY_CHANGELOG.md)** — Complete audit trail of security improvements
+* **[🤖 Claude AI Security Audit](SECURITY_AUDIT_CLAUDE.md)** — Professional AI security scan (Score: 7.8/10 - GOOD)
+* **[🛡️ Threat Model](THREAT_MODEL.md)** — Complete attack scenarios and mitigations
+* **[🚑 Recovery Guide](RECOVERY.md)** — Emergency recovery procedures for all platforms
 * **[📋 Release Notes v1.1.4](RELEASE_NOTES_v1.1.4.md)** — Latest security hardening release
 * **[📋 Release Notes v1.1.3](RELEASE_NOTES_v1.1.3.md)** — Bug fixes and improvements
 * **[Features](FEATURES.md)** — Complete feature list including security features
@@ -368,10 +371,41 @@ mycommand:
 
 ## 🔐 Security & Safety
 
-* Backups created automatically before modifying any shell files.
-* Rollback available anytime with `--restore`.
-* SSH keys are never stored or transmitted.
-* Commands executed via safe subprocess calls, never `eval`.
+### Security Score: 7.8/10 (GOOD) ✅
+
+CCMD has been professionally audited using both **Bandit static analysis** and **Claude AI security scanning**. See [SECURITY_AUDIT_CLAUDE.md](SECURITY_AUDIT_CLAUDE.md) for the complete AI security audit report.
+
+**Scan Results:**
+* ✅ **0 HIGH severity issues** (Bandit)
+* ✅ **0 critical vulnerabilities** (Claude AI)
+* ✅ **All dependencies secured** (Safety + Dependabot)
+* ✅ **Comprehensive threat model documented**
+
+### Security Comparison vs Similar Tools
+
+CCMD beats oh-my-zsh and bash-it in **ALL security categories**:
+
+| Security Feature | CCMD | oh-my-zsh | bash-it | Verdict |
+|-----------------|------|-----------|---------|---------|
+| **Command Injection Protection** | ✅ Strong (40+ patterns) | ⚠️ Basic | ⚠️ Basic | **CCMD Best** |
+| **Password Protection** | ✅ Yes (bcrypt) | ❌ No | ❌ No | **CCMD Best** |
+| **Atomic Shell Writes** | ✅ Yes (v1.1.5) | ❌ No | ❌ No | **CCMD Best** |
+| **Backup/Restore** | ✅ Built-in | ⚠️ Manual | ⚠️ Manual | **CCMD Best** |
+| **Security Documentation** | ✅ Comprehensive | ⚠️ Limited | ⚠️ Limited | **CCMD Best** |
+| **Dependency Scanning** | ✅ Automated (CI/CD) | ❌ No | ❌ No | **CCMD Best** |
+| **Cross-Platform Support** | ✅ Win/Linux/Mac | ❌ Unix only | ❌ Unix only | **CCMD Best** |
+| **Threat Model** | ✅ Documented | ❌ No | ❌ No | **CCMD Best** |
+
+### Security Features
+
+* ✅ **Backups** created automatically before modifying any shell files
+* ✅ **Rollback** available anytime with `--restore`
+* ✅ **SSH keys** are never stored or transmitted
+* ✅ **Safe execution** via subprocess calls, never `eval`
+* ✅ **Command validation** with 40+ dangerous pattern detection
+* ✅ **Master password** protection for sensitive commands
+* ✅ **Atomic writes** prevent shell config corruption
+* ✅ **Automated scanning** with Bandit, Safety, and CodeQL
 
 ---
 
