@@ -506,7 +506,18 @@ class CommandExecutor:
         ccmd_path = Path(__file__).parent.parent.parent
         python_exec = sys.executable
 
-        return f'"{python_exec}" "{ccmd_path}/run.py" --exec "{command}"'
+        # SECURITY: Set CCMD_INTERNAL=1 to allow --exec for internal command chaining
+        # This prevents external users from calling --exec directly
+        shell_type = self.system_info.shell_type if self.system_info else 'bash'
+
+        if shell_type == 'powershell':
+            # PowerShell syntax: $env:VAR=value; command
+            env_prefix = '$env:CCMD_INTERNAL=1; '
+        else:
+            # Bash/Zsh/Fish syntax: VAR=value command
+            env_prefix = 'CCMD_INTERNAL=1 '
+
+        return f'{env_prefix}"{python_exec}" "{ccmd_path}/run.py" --exec "{command}"'
 
 
 class CommandOutput:

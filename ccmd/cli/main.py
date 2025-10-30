@@ -285,6 +285,8 @@ def main():
                        help='Restore shell configuration from backup')
     parser.add_argument('--check', action='store_true',
                        help='Check system configuration')
+    parser.add_argument('--check-paths', action='store_true',
+                       help='Validate CCMD installation paths and environment (v1.1.5)')
     parser.add_argument('--edit', action='store_true',
                        help='Open interactive command editor')
     parser.add_argument('--test', action='store_true',
@@ -306,7 +308,7 @@ def main():
     parser.add_argument('--reset-password', action='store_true',
                        help='Reset (delete) master password - use if you forgot it')
     parser.add_argument('--exec', type=str,
-                       help='Execute a raw command (internal use)')
+                       help=argparse.SUPPRESS)  # Hidden: internal use only
 
     # Command execution
     parser.add_argument('command', nargs='?', help='Command to execute')
@@ -320,7 +322,7 @@ def main():
 
     # Handle debug mode if no other command
     if args.debug and not any([args.install, args.uninstall, args.restore,
-                                args.check, args.edit, args.test, args.reload,
+                                args.check, args.check_paths, args.edit, args.test, args.reload,
                                 args.list, args.version, args.update, args.init,
                                 args.change_password, args.reset_password, args.exec, args.command]):
         return handle_debug()
@@ -338,6 +340,8 @@ def main():
         return handle_restore()
     elif args.check:
         return handle_check()
+    elif args.check_paths:
+        return handle_check_paths()
     elif args.edit:
         return handle_edit()
     elif args.test:
@@ -567,6 +571,143 @@ def handle_check():
         CommandOutput.print_error(f"Commands file not found: {registry.config_path}")
 
     return 0
+
+
+def handle_check_paths():
+    """
+    Validate CCMD installation paths and environment (v1.1.5 Security Enhancement)
+
+    Helps diagnose installation issues, path problems, and environment misconfigurations.
+    """
+    print(f"{Colors.BOLD}{'='*60}{Colors.END}")
+    print(f"{Colors.HEADER}CCMD Path Diagnostics (v1.1.5){Colors.END}")
+    print(f"{Colors.BOLD}{'='*60}{Colors.END}\n")
+
+    issues_found = 0
+    warnings_found = 0
+
+    # 1. Check CCMD_HOME environment variable
+    print(f"{Colors.CYAN}[1/7] Checking CCMD_HOME environment variable...{Colors.END}")
+    ccmd_home = os.environ.get('CCMD_HOME')
+    if ccmd_home:
+        print(f"  {Colors.GREEN}✓{Colors.END} CCMD_HOME is set: {ccmd_home}")
+    else:
+        print(f"  {Colors.RED}✗{Colors.END} CCMD_HOME is not set")
+        print(f"    {Colors.YELLOW}→{Colors.END} CCMD may not be installed. Run: python3 run.py --install")
+        issues_found += 1
+
+    # 2. Check if CCMD_HOME points to valid directory
+    print(f"\n{Colors.CYAN}[2/7] Validating CCMD_HOME directory...{Colors.END}")
+    if ccmd_home:
+        ccmd_path = Path(ccmd_home)
+        if ccmd_path.exists() and ccmd_path.is_dir():
+            print(f"  {Colors.GREEN}✓{Colors.END} Directory exists: {ccmd_path}")
+        else:
+            print(f"  {Colors.RED}✗{Colors.END} Directory does not exist: {ccmd_path}")
+            print(f"    {Colors.YELLOW}→{Colors.END} CCMD was moved or deleted")
+            print(f"    {Colors.YELLOW}→{Colors.END} Fix: python3 /new/path/to/ccmd/run.py --uninstall")
+            print(f"    {Colors.YELLOW}→{Colors.END} Then: python3 /new/path/to/ccmd/run.py --install")
+            issues_found += 1
+    else:
+        print(f"  {Colors.YELLOW}⚠{Colors.END} Skipped (CCMD_HOME not set)")
+        warnings_found += 1
+
+    # 3. Check run.py exists
+    print(f"\n{Colors.CYAN}[3/7] Checking for run.py entry point...{Colors.END}")
+    if ccmd_home:
+        run_py = Path(ccmd_home) / "run.py"
+        if run_py.exists():
+            print(f"  {Colors.GREEN}✓{Colors.END} Found: {run_py}")
+        else:
+            print(f"  {Colors.RED}✗{Colors.END} Missing: {run_py}")
+            print(f"    {Colors.YELLOW}→{Colors.END} CCMD installation is incomplete or corrupted")
+            issues_found += 1
+    else:
+        print(f"  {Colors.YELLOW}⚠{Colors.END} Skipped (CCMD_HOME not set)")
+        warnings_found += 1
+
+    # 4. Check commands.yaml exists
+    print(f"\n{Colors.CYAN}[4/7] Checking for commands.yaml configuration...{Colors.END}")
+    if ccmd_home:
+        commands_yaml = Path(ccmd_home) / "commands.yaml"
+        if commands_yaml.exists():
+            print(f"  {Colors.GREEN}✓{Colors.END} Found: {commands_yaml}")
+            # Try to load and count commands
+            try:
+                registry = CommandRegistry(commands_yaml)
+                commands = registry.list_commands()
+                print(f"  {Colors.GREEN}✓{Colors.END} Loaded {len(commands)} commands successfully")
+            except Exception as e:
+                print(f"  {Colors.RED}✗{Colors.END} Failed to load commands: {e}")
+                print(f"    {Colors.YELLOW}→{Colors.END} commands.yaml may be corrupted")
+                issues_found += 1
+        else:
+            print(f"  {Colors.RED}✗{Colors.END} Missing: {commands_yaml}")
+            print(f"    {Colors.YELLOW}→{Colors.END} Run: python3 {run_py} --install (to regenerate)")
+            issues_found += 1
+    else:
+        print(f"  {Colors.YELLOW}⚠{Colors.END} Skipped (CCMD_HOME not set)")
+        warnings_found += 1
+
+    # 5. Check Python executable
+    print(f"\n{Colors.CYAN}[5/7] Checking Python executable...{Colors.END}")
+    python_exec = sys.executable
+    print(f"  {Colors.GREEN}✓{Colors.END} Python: {python_exec}")
+    print(f"  {Colors.GREEN}✓{Colors.END} Version: {sys.version.split()[0]}")
+
+    # 6. Check shell integration
+    print(f"\n{Colors.CYAN}[6/7] Checking shell integration...{Colors.END}")
+    system_info = get_system_info()
+    rc_file = system_info.shell_rc_file
+
+    if rc_file and Path(rc_file).exists():
+        print(f"  {Colors.GREEN}✓{Colors.END} Shell config: {rc_file}")
+
+        # Check if CCMD integration exists
+        with open(rc_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        if "# CCMD Integration" in content:
+            print(f"  {Colors.GREEN}✓{Colors.END} CCMD integration found in shell config")
+        else:
+            print(f"  {Colors.YELLOW}⚠{Colors.END} CCMD integration NOT found in shell config")
+            print(f"    {Colors.YELLOW}→{Colors.END} CCMD may not be installed")
+            print(f"    {Colors.YELLOW}→{Colors.END} Run: python3 /path/to/ccmd/run.py --install")
+            warnings_found += 1
+    else:
+        print(f"  {Colors.RED}✗{Colors.END} Shell config not found: {rc_file}")
+        issues_found += 1
+
+    # 7. Check backups
+    print(f"\n{Colors.CYAN}[7/7] Checking backup system...{Colors.END}")
+    backup_dir = Path.home() / ".ccmd" / "backups"
+    if backup_dir.exists():
+        backups = list(backup_dir.glob("*.bak"))
+        print(f"  {Colors.GREEN}✓{Colors.END} Backup directory exists: {backup_dir}")
+        print(f"  {Colors.GREEN}✓{Colors.END} Found {len(backups)} backup(s)")
+    else:
+        print(f"  {Colors.YELLOW}⚠{Colors.END} No backup directory found (will be created on first use)")
+        warnings_found += 1
+
+    # Summary
+    print(f"\n{Colors.BOLD}{'='*60}{Colors.END}")
+    print(f"{Colors.HEADER}Diagnostic Summary{Colors.END}")
+    print(f"{Colors.BOLD}{'='*60}{Colors.END}\n")
+
+    if issues_found == 0 and warnings_found == 0:
+        print(f"{Colors.GREEN}✓ All checks passed! CCMD is properly configured.{Colors.END}\n")
+        return 0
+    elif issues_found == 0:
+        print(f"{Colors.YELLOW}⚠ {warnings_found} warning(s) found, but no critical issues.{Colors.END}")
+        print(f"{Colors.YELLOW}  CCMD should work, but may have minor issues.{Colors.END}\n")
+        return 0
+    else:
+        print(f"{Colors.RED}✗ {issues_found} issue(s) found that may prevent CCMD from working.{Colors.END}")
+        if warnings_found > 0:
+            print(f"{Colors.YELLOW}⚠ {warnings_found} warning(s) also found.{Colors.END}")
+        print(f"\n{Colors.CYAN}→ See messages above for suggested fixes.{Colors.END}")
+        print(f"{Colors.CYAN}→ For more help, see: {Colors.END}RECOVERY.md\n")
+        return 1
 
 
 def handle_edit():
@@ -965,7 +1106,14 @@ def handle_hi():
 
 
 def handle_exec(command: str):
-    """Execute a raw command"""
+    """Execute a raw command (INTERNAL USE ONLY)"""
+    # SECURITY: Only allow internal calls via environment variable
+    # This prevents external users from bypassing command validation
+    if os.environ.get('CCMD_INTERNAL') != '1':
+        print("Error: --exec is for internal use only", file=sys.stderr)
+        print("Use regular CCMD commands instead (e.g., 'ccmd <command>')", file=sys.stderr)
+        return 1
+
     system_info = get_system_info()
     executor = CommandExecutor(system_info)
 

@@ -1,0 +1,71 @@
+# Dependabot Configuration for CCMD
+# Automated dependency vulnerability scanning and updates
+# Version: v1.1.5
+
+version: 2
+updates:
+  # Python dependencies (pip)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Wisyle"
+    labels:
+      - "dependencies"
+      - "security"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    # Group minor/patch updates together
+    groups:
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "Wisyle"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+
+# Security updates configuration
+# Dependabot will automatically:
+# - Check for security vulnerabilities in dependencies
+# - Create pull requests to update vulnerable packages
+# - Provide detailed security advisory information
+# - Run weekly on Mondays at 09:00 UTC
+
+# How it works:
+# 1. Scans requirements.txt for known vulnerabilities
+# 2. Checks GitHub Security Advisories database
+# 3. Opens PRs with version updates that fix vulnerabilities
+# 4. Labels PRs for easy identification
+# 5. Assigns Wisyle as reviewer
+
+# What to do when Dependabot creates a PR:
+# 1. Review the security advisory details
+# 2. Check if the update is a breaking change
+# 3. Run security tests: bandit -r ccmd/ && safety check
+# 4. Test locally before merging
+# 5. Merge if tests pass and no breaking changes
+
+# For more info:
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates

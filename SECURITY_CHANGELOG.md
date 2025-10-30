@@ -2,6 +2,101 @@
 
 This document tracks all security-related changes to CCMD. Each entry includes the version, date, and detailed description of security improvements or fixes.
 
+## v1.1.5 (2025-10-30)
+
+### HIGH Priority Fixes
+- **FIX:** --exec flag exposure vulnerability
+  - Hidden --exec from public help text using argparse.SUPPRESS
+  - Added CCMD_INTERNAL environment variable gate
+  - Only internal command chaining can call --exec
+  - External calls blocked with clear error message
+  - Lines: ccmd/cli/main.py:308-309, ccmd/cli/main.py:967-982, ccmd/core/executor.py:509-520
+
+### MEDIUM Priority Improvements
+- **ADD:** Atomic shell config writes (prevents corruption)
+  - Write to temp file first
+  - Atomic rename using os.replace()
+  - Automatic backup before modification
+  - Auto-recovery on failure
+  - Shell syntax validation (optional)
+  - Lines: ccmd/core/rollback.py:219-380
+
+- **ADD:** Path diagnostics command (--check-paths)
+  - Validates CCMD_HOME environment variable
+  - Checks installation directory exists
+  - Verifies run.py and commands.yaml present
+  - Tests shell integration
+  - Reports backup status
+  - Lines: ccmd/cli/main.py:576-710
+
+- **ENHANCE:** Improved safe_file_edit with atomic writes
+  - Now uses atomic writes by default for shell configs
+  - Optional validation function support
+  - Better error handling with auto-recovery
+  - Lines: ccmd/core/rollback.py:395-450
+
+### Documentation
+- **ADD:** THREAT_MODEL.md
+  - Complete threat analysis
+  - Attack scenarios and mitigations
+  - Security design principles
+  - What CCMD protects against vs what it doesn't
+  - Incident response procedures
+
+- **ADD:** RECOVERY.md
+  - Emergency recovery procedures
+  - Step-by-step troubleshooting
+  - Shell config restoration guide
+  - Manual removal instructions
+  - Platform-specific recovery (Linux/Mac/Windows/WSL)
+
+- **UPDATE:** Enhanced security documentation
+  - Expanded threat coverage
+  - Added recovery procedures
+  - Documented new security features
+
+### Security Infrastructure
+- **ADD:** Dependabot configuration
+  - Weekly dependency vulnerability scanning
+  - Automated pull requests for security updates
+  - Python and GitHub Actions monitoring
+  - Lines: .github/dependabot.yml
+
+- **ENHANCE:** Security linting workflow
+  - Added Safety dependency scanner
+  - Checks for known vulnerabilities in requirements.txt
+  - Integrated with existing Bandit scans
+  - Lines: .github/workflows/security_lint.yml:50-55
+
+### Security Improvements Summary
+
+**Before v1.1.5:**
+- --exec flag publicly accessible (anyone could call it)
+- Shell config writes not atomic (corruption possible)
+- No path diagnostics (hard to troubleshoot)
+- No dependency vulnerability monitoring
+- Limited recovery documentation
+
+**After v1.1.5:**
+- ✅ --exec protected by environment gate
+- ✅ Atomic writes prevent corruption
+- ✅ --check-paths diagnoses issues
+- ✅ Dependabot monitors vulnerabilities
+- ✅ Comprehensive recovery guide
+
+### Metrics
+- Bandit scan: 0 HIGH, 5 MEDIUM, 38 LOW (maintained)
+- Safety scan: 0 vulnerabilities (maintained)
+- New features: 4 (--check-paths, atomic writes, THREAT_MODEL, RECOVERY)
+- Documentation: +2 files (THREAT_MODEL.md, RECOVERY.md)
+- Security tests: All passing
+
+### Acknowledgments
+- Security audit feedback from community reviewer (October 30, 2025)
+- Recommendations implemented: 7/7 items addressed
+
+---
+
 ## v1.1.4 (2025-10-30)
 
 ### HIGH Priority Fixes

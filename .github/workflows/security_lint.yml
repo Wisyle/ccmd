@@ -46,3 +46,10 @@ jobs:
           pip install bandit
           bandit -r ccmd/ -f txt -ll  # Only show Medium and High severity
         continue-on-error: true  # Don't fail the build, just report
+
+      - name: Run Safety dependency scan
+        run: |
+          pip install safety
+          # Check for known vulnerabilities in dependencies
+          safety check --file requirements.txt --output text || true
+        continue-on-error: true  # Don't fail the build, just report

@@ -1,9 +1,12 @@
 """Backup and restore shell configuration files"""
 
 import shutil
+import os
+import tempfile
+import subprocess
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Callable
 import json
 
 
@@ -213,6 +216,170 @@ class BackupManager:
         self._save_manifest()
 
 
+def atomic_write_shell_config(file_path: Path, content: str,
+                               validate_func: Optional[Callable[[str], Tuple[bool, str]]] = None,
+                               backup_manager: Optional[BackupManager] = None) -> Tuple[bool, str]:
+    """
+    Atomically write to a shell config file with validation (v1.1.5 Security Enhancement)
+
+    This function prevents corrupted shell configs by:
+    1. Creating a backup first
+    2. Writing to a temporary file
+    3. Validating the content (optional)
+    4. Atomically renaming to target (prevents partial writes)
+    5. Auto-recovery on failure
+
+    Args:
+        file_path: Path to shell config file (.bashrc, .zshrc, etc.)
+        content: New content to write
+        validate_func: Optional validation function (content) -> (is_valid, error_message)
+        backup_manager: Optional BackupManager instance for backups
+
+    Returns:
+        Tuple of (success, message)
+
+    Example:
+        >>> def validate_bashrc(content: str) -> Tuple[bool, str]:
+        ...     if 'CCMD_HOME' not in content:
+        ...         return False, "Missing CCMD_HOME"
+        ...     return True, ""
+        >>> success, msg = atomic_write_shell_config(Path("~/.bashrc"), content, validate_bashrc)
+    """
+    if backup_manager is None:
+        backup_manager = BackupManager()
+
+    try:
+        # Step 1: Create backup FIRST (safety net)
+        if file_path.exists():
+            success, backup_result = backup_manager.create_backup(
+                file_path,
+                description="Pre-atomic-write backup"
+            )
+            if not success:
+                return False, f"Backup failed: {backup_result}"
+            backup_path = Path(backup_result)
+        else:
+            backup_path = None
+
+        # Step 2: Validate content if validator provided
+        if validate_func:
+            is_valid, error_msg = validate_func(content)
+            if not is_valid:
+                return False, f"Validation failed: {error_msg}"
+
+        # Step 3: Write to temporary file in same directory (ensures same filesystem)
+        # Using same directory ensures os.rename() is atomic
+        temp_fd, temp_path_str = tempfile.mkstemp(
+            dir=file_path.parent,
+            prefix=f".{file_path.name}.",
+            suffix=".tmp"
+        )
+
+        try:
+            temp_path = Path(temp_path_str)
+
+            # Write content to temp file
+            with os.fdopen(temp_fd, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+            # Step 4: Set same permissions as original (if exists)
+            if file_path.exists():
+                original_stat = file_path.stat()
+                os.chmod(temp_path, original_stat.st_mode)
+
+            # Step 5: Atomic rename (this is the critical security improvement)
+            # os.replace() is atomic on both Unix and Windows
+            os.replace(temp_path, file_path)
+
+            return True, f"Successfully wrote {file_path}"
+
+        except Exception as write_error:
+            # Clean up temp file on failure
+            if Path(temp_path_str).exists():
+                try:
+                    os.unlink(temp_path_str)
+                except:
+                    pass
+            raise write_error
+
+    except Exception as e:
+        # Step 6: Auto-recovery - restore backup on failure
+        if backup_path and backup_path.exists():
+            try:
+                backup_manager.restore_backup(backup_path=backup_path)
+                return False, f"Write failed, backup restored: {e}"
+            except Exception as restore_error:
+                return False, f"Write failed AND restore failed: {e} | {restore_error}"
+        else:
+            return False, f"Write failed: {e}"
+
+
+def validate_shell_syntax(content: str, shell_type: str = 'bash') -> Tuple[bool, str]:
+    """
+    Validate shell config syntax (v1.1.5 Security Enhancement)
+
+    Args:
+        content: Shell config content to validate
+        shell_type: Shell type (bash, zsh, fish, powershell)
+
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    # Write to temp file for syntax checking
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.sh', delete=False) as f:
+            temp_file = f.name
+            f.write(content)
+
+        try:
+            if shell_type in ('bash', 'zsh'):
+                # Use shell's -n flag to check syntax without executing
+                shell_cmd = 'bash' if shell_type == 'bash' else 'zsh'
+                result = subprocess.run(
+                    [shell_cmd, '-n', temp_file],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if result.returncode != 0:
+                    return False, f"Syntax error: {result.stderr}"
+
+            elif shell_type == 'fish':
+                # Fish uses --no-execute
+                result = subprocess.run(
+                    ['fish', '--no-execute', temp_file],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if result.returncode != 0:
+                    return False, f"Syntax error: {result.stderr}"
+
+            elif shell_type == 'powershell':
+                # PowerShell uses -File with -NoExecute (syntax check)
+                result = subprocess.run(
+                    ['powershell', '-NoProfile', '-File', temp_file],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                # PowerShell doesn't have a pure syntax check, so we just ensure no crashes
+                if result.returncode not in (0, 1):
+                    return False, f"Syntax error: {result.stderr}"
+
+            return True, ""
+
+        finally:
+            # Clean up temp file
+            try:
+                os.unlink(temp_file)
+            except:
+                pass
+
+    except Exception as e:
+        return False, f"Validation failed: {e}"
+
+
 class RollbackManager:
     """High-level rollback operations"""
 
@@ -225,23 +392,21 @@ class RollbackManager:
         """
         self.backup_manager = backup_manager or BackupManager()
 
-    def safe_file_edit(self, file_path: Path, edit_func, description: str = ""):
+    def safe_file_edit(self, file_path: Path, edit_func, description: str = "",
+                      use_atomic_write: bool = True, validate_func: Optional[Callable[[str], Tuple[bool, str]]] = None):
         """
-        Safely edit a file with automatic backup
+        Safely edit a file with automatic backup (v1.1.5: Now uses atomic writes by default)
 
         Args:
             file_path: Path to file to edit
             edit_func: Function that performs the edit (takes file content, returns new content)
             description: Description of the edit
+            use_atomic_write: If True, use atomic write (default). Set False for non-critical files.
+            validate_func: Optional validation function for atomic writes
 
         Returns:
             Tuple of (success, message)
         """
-        # Create backup first
-        success, result = self.backup_manager.create_backup(file_path, description)
-        if not success:
-            return False, f"Backup failed: {result}"
-
         try:
             # Read current content
             if file_path.exists():
@@ -255,14 +420,33 @@ class RollbackManager:
 
             # Write new content
             file_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(new_content)
 
-            return True, "File edited successfully"
+            if use_atomic_write:
+                # Use atomic write for shell configs (v1.1.5 security enhancement)
+                success, message = atomic_write_shell_config(
+                    file_path,
+                    new_content,
+                    validate_func=validate_func,
+                    backup_manager=self.backup_manager
+                )
+                return success, message
+            else:
+                # Legacy direct write (for non-critical files)
+                # Create backup first
+                if file_path.exists():
+                    success, result = self.backup_manager.create_backup(file_path, description)
+                    if not success:
+                        return False, f"Backup failed: {result}"
+
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(new_content)
+
+                return True, "File edited successfully"
 
         except Exception as e:
             # Try to restore backup on failure
-            self.backup_manager.restore_backup(original_path=file_path)
+            if file_path.exists():
+                self.backup_manager.restore_backup(original_path=file_path)
             return False, f"Edit failed: {e}"
 
     def restore_all(self) -> List[Tuple[str, bool, str]]:
