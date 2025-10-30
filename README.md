@@ -11,15 +11,15 @@
 > Replace long, repetitive terminal syntax with short, intuitive commands.
 > Works on **Linux**, **Windows PowerShell**, and **WSL** — safe, rollback-ready, and open source.
 
-> **🔒 New in v1.1.4:** Security Hardening Release! 0 HIGH vulnerabilities, comprehensive security audit, automated scanning, and professional security documentation. [See Security Report](SECURITY_CHANGELOG.md)
+> **🔒 New in v1.1.5:** Advanced Security Release! Internal flag protection, atomic shell writes, path diagnostics, threat model documentation, and automated dependency scanning. [See Security Report](SECURITY_CHANGELOG.md)
+
+> **🛡️ v1.1.4:** Security Hardening Release! 0 HIGH vulnerabilities, comprehensive security audit, automated scanning, and professional security documentation.
 
 > **✨ v1.1.3:** Bug Fix Release! Fixed command chaining directory persistence, interactive timeout issues, and pip install warnings.
 
-> **🔗 v1.1.2:** Command Chaining & Composability! Chain commands with `>>>`, enhanced security, and process management.
+> **⚠️ Important:** CCMD is a powerful tool that sits between your shell and you. Like electricity or any powerful tool, **it can be dangerous if used wrongly**. Please read the [Security Policy](SECURITY.md) and [Threat Model](THREAT_MODEL.md) before using CCMD. Use carefully, cautiously, and responsibly.
 
-> **⚠️ Important:** CCMD is a powerful tool that sits between your shell and you. Like electricity or any powerful tool, **it can be dangerous if used wrongly**. Please read the [Security Policy](SECURITY.md) before using CCMD. Use carefully, cautiously, and responsibly.
-
-> **📌 Version Notice:** We **strongly recommend using v1.1.4 or later**. This version has undergone comprehensive security auditing and passes all automated security scans. [Upgrade now](https://github.com/Wisyle/ccmd/releases/latest) — it's safe, fast, and backward compatible!
+> **📌 Version Notice:** We **strongly recommend using v1.1.5 or later**. This version includes critical security enhancements and passes all automated security scans with comprehensive threat model documentation. [Upgrade now](https://github.com/Wisyle/ccmd/releases/latest) — it's safe, fast, and backward compatible!
 
 ---
 
@@ -49,7 +49,19 @@ CCMD handles the rest. It safely installs into your shell profile, manages custo
 
 ## ✨ Features
 
-### 🔒 v1.1.4 Security Hardening (LATEST!)
+### 🔒 v1.1.5 Advanced Security (LATEST!)
+* **🔐 Internal Flag Protection** — `--exec` hidden from help, environment-gated for internal use only
+* **⚛️ Atomic Shell Config Writes** — Prevents corruption with temp file + atomic rename pattern
+* **🩺 Path Diagnostics Command** — `--check-paths` validates installation, environment, and backups
+* **🛡️ Threat Model Documentation** — Complete attack scenarios, mitigations, and security boundaries ([THREAT_MODEL.md](THREAT_MODEL.md))
+* **🚑 Recovery Guide** — Emergency procedures for all failure scenarios ([RECOVERY.md](RECOVERY.md))
+* **📦 Dependabot Integration** — Weekly automated dependency vulnerability scanning
+* **🔍 Enhanced CI Scanning** — Safety dependency scanner added to security workflow
+* **📊 Security Metrics** — 0 HIGH severity issues maintained, all 7 audit items addressed
+
+**Security Achievement:** Comprehensive threat model, automated scanning, and emergency recovery procedures!
+
+### 🛡️ v1.1.4 Security Hardening
 * **🛡️ Tarfile Path Traversal Fixed** — Prevents malicious archives from writing outside target directory (CVE-2007-4559)
 * **🔐 URL Scheme Validation** — Restricts all URL operations to HTTPS only, prevents downgrade attacks
 * **📦 Dependency Security** — GitPython pinned to v3.1.43, eliminates 6 known vulnerabilities
@@ -58,8 +70,6 @@ CCMD handles the rest. It safely installs into your shell profile, manages custo
 * **📊 Security Metrics** — 0 HIGH severity issues, all dependencies secured
 * **📝 Security Changelog** — Complete audit trail of all security improvements
 * **⚙️ CodeQL Analysis** — Semantic code analysis detects vulnerabilities automatically
-
-**Security Achievement:** Passes all automated security scans with 0 HIGH severity issues!
 
 ### 🐛 v1.1.3 Bug Fixes
 * **🔧 Fixed Directory Persistence** — Chained commands now correctly persist directory changes
