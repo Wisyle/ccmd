@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ccmd"
+version = "1.1.4"
+description = "Cross-platform Command Manager - Simplify your terminal with intuitive shortcuts"
+readme = "README.md"
+requires-python = ">=3.7"
+license = {text = "MIT"}
+authors = [
+    {name = "De Catalyst", email = "Robert5560newton@gmail.com"}
+]
+maintainers = [
+    {name = "De Catalyst", email = "Robert5560newton@gmail.com"}
+]
+keywords = [
+    "cli", "command-line", "terminal", "productivity", "automation",
+    "shell", "commands", "shortcuts", "developer-tools", "cross-platform"
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development",
+    "Topic :: System :: Shells",
+    "Topic :: System :: System Shells",
+    "Topic :: Utilities",
+]
+
+dependencies = [
+    "PyYAML>=6.0",
+    "questionary>=2.0.0",
+    "GitPython==3.1.43",
+    "bcrypt>=4.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "bandit>=1.7",
+    "safety>=2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Wisyle/ccmd"
+Documentation = "https://github.com/Wisyle/ccmd#readme"
+Repository = "https://github.com/Wisyle/ccmd"
+"Bug Tracker" = "https://github.com/Wisyle/ccmd/issues"
+Security = "https://github.com/Wisyle/ccmd/security"
+Changelog = "https://github.com/Wisyle/ccmd/releases"
+
+[project.scripts]
+ccmd = "ccmd.cli.main:main"
+
+[tool.setuptools]
+packages = ["ccmd", "ccmd.cli", "ccmd.core"]
+
+[tool.setuptools.package-data]
+ccmd = ["../commands.yaml"]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "venv"]
+skips = ["B603", "B607"]

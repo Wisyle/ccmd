@@ -1,0 +1,21 @@
+# Include important documentation
+include README.md
+include LICENSE
+include SECURITY.md
+include SECURITY_CHANGELOG.md
+
+# Include command definitions
+include commands.yaml
+
+# Include requirements
+include requirements.txt
+
+# Exclude development and testing files
+exclude .gitignore
+exclude showcase.py
+exclude showcase_config.yaml
+exclude setup.sh
+exclude setup.ps1
+recursive-exclude tests *
+recursive-exclude .github *
+recursive-exclude security *
