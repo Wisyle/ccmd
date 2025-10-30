@@ -408,6 +408,10 @@ def handle_update():
     try:
         # Get latest release info from GitHub API
         api_url = "https://api.github.com/repos/Wisyle/ccmd/releases/latest"
+        # SECURITY: Validate URL scheme to prevent file:// or other schemes
+        if not api_url.startswith('https://'):
+            CommandOutput.print_error("Invalid URL scheme - only HTTPS allowed")
+            return 1
         with urllib.request.urlopen(api_url) as response:
             release_data = json.loads(response.read().decode())
 
@@ -432,6 +436,10 @@ def handle_update():
 
         # Download tarball to temp file
         with tempfile.NamedTemporaryFile(delete=False, suffix='.tar.gz') as tmp_file:
+            # SECURITY: Validate URL scheme
+            if not tarball_url.startswith('https://'):
+                CommandOutput.print_error("Invalid tarball URL - only HTTPS allowed")
+                return 1
             with urllib.request.urlopen(tarball_url) as response:
                 tmp_file.write(response.read())
             tarball_path = tmp_file.name
@@ -440,7 +448,26 @@ def handle_update():
         with tempfile.TemporaryDirectory() as tmp_dir:
             CommandOutput.print_info("Extracting files...")
             with tarfile.open(tarball_path, 'r:gz') as tar:
-                tar.extractall(tmp_dir)
+                # SECURITY: Validate tar members before extraction (CVE-2007-4559)
+                def is_safe_path(path, base_dir):
+                    """Check if a path is safe to extract"""
+                    # Resolve the absolute path
+                    resolved = os.path.normpath(os.path.join(base_dir, path))
+                    # Ensure it's within the base directory
+                    return resolved.startswith(os.path.normpath(base_dir))
+                
+                # Check all members before extraction
+                for member in tar.getmembers():
+                    if not is_safe_path(member.name, tmp_dir):
+                        CommandOutput.print_error(f"Unsafe path in tarball: {member.name}")
+                        return 1
+                    # Also check for absolute paths and parent directory references
+                    if member.name.startswith('/') or '..' in member.name:
+                        CommandOutput.print_error(f"Suspicious path in tarball: {member.name}")
+                        return 1
+                
+                # Safe to extract - we validated all members above
+                tar.extractall(tmp_dir)  # nosec B202
 
             # Find extracted directory (GitHub tarballs have a single root directory)
             extracted_dirs = [d for d in Path(tmp_dir).iterdir() if d.is_dir()]
@@ -659,6 +686,9 @@ def handle_version():
     print(f"{Colors.BOLD}{Colors.BLUE}[Latest Version]{Colors.END}")
     try:
         api_url = "https://api.github.com/repos/Wisyle/ccmd/releases/latest"
+        # SECURITY: Validate URL scheme
+        if not api_url.startswith('https://'):
+            raise ValueError("Invalid URL scheme - only HTTPS allowed")
         with urllib.request.urlopen(api_url, timeout=5) as response:
             release_data = json.loads(response.read().decode())
 

@@ -1,0 +1,91 @@
+
+
+[33m[1m+===========================================================================================================================================================================================+[0m
+
+
+[31m[1mDEPRECATED: [0m[33m[1mthis command (`check`) has been DEPRECATED, and will be unsupported beyond 01 June 2024.[0m
+
+
+[32mWe highly encourage switching to the new [0m[32m[1m`scan`[0m[32m command which is easier to use, more powerful, and can be set up to mimic the deprecated command if required.[0m
+
+
+[33m[1m+===========================================================================================================================================================================================+[0m
+
+
++==============================================================================+
+
+                               /$$$$$$            /$$
+                              /$$__  $$          | $$
+           /$$$$$$$  /$$$$$$ | $$  \__//$$$$$$  /$$$$$$   /$$   /$$
+          /$$_____/ |____  $$| $$$$   /$$__  $$|_  $$_/  | $$  | $$
+         |  $$$$$$   /$$$$$$$| $$_/  | $$$$$$$$  | $$    | $$  | $$
+          \____  $$ /$$__  $$| $$    | $$_____/  | $$ /$$| $$  | $$
+          /$$$$$$$/|  $$$$$$$| $$    |  $$$$$$$  |  $$$$/|  $$$$$$$
+         |_______/  \_______/|__/     \_______/   \___/   \____  $$
+                                                          /$$  | $$
+                                                         |  $$$$$$/
+  by safetycli.com                                        \______/
+
++==============================================================================+
+
+ [1mANNOUNCEMENTS[0m 
+
+[33m  * Warning: pyyaml, questionary, gitpython and bcrypt are unpinned. Safety by[0m 
+[33m    default does not report on potential vulnerabilities in unpinned packages.[0m 
+[33m    It is recommended to pin your dependencies unless this is a library meant[0m 
+[33m    for distribution. To learn more about reporting these, specifier range[0m 
+[33m    handling, and options for scanning unpinned packages visit[0m 
+[33m    https://docs.pyup.io/docs/safety-range-specs[0m 
+
++==============================================================================+
+
+ [1mREPORT[0m 
+
+  Safety [1mv3.6.2[0m is scanning for [1mVulnerabilities[0m[1m...[0m
+[1m  Scanning dependencies[0m in your [1mfiles:[0m
+
+  -> requirements.txt
+
+  Using [1mopen-source vulnerability database[0m
+[1m  Found and scanned 4 packages[0m
+  Timestamp [1m2025-10-30 02:36:14[0m
+[1m  0[0m[1m vulnerabilities reported[0m
+[1m  6[0m[1m vulnerabilities ignored[0m
+
++==============================================================================+
+ [1mVULNERABILITIES REPORTED[0m 
++==============================================================================+
+
+[33m-> Warning: 6 known vulnerabilities match the gitpython versions that could be[0m 
+[33m   installed from your specifier: GitPython>=3.1.0 (unpinned). These[0m 
+[33m   vulnerabilities are not reported by default. To report these vulnerabilities[0m 
+[33m   set 'ignore-unpinned-requirements' to False under 'security' in your policy[0m 
+[33m   file. See https://docs.pyup.io/docs/safety-20-policy-file for more[0m 
+[33m   information.[0m 
+[33m   It is recommended to pin your dependencies unless this is a library meant[0m 
+[33m   for distribution. To learn more about reporting these, specifier range[0m 
+[33m   handling, and options for scanning unpinned packages visit[0m 
+[33m   https://docs.pyup.io/docs/safety-range-specs[0m 
+
+
+
++==============================================================================+
+
+ Scan was completed. 0 vulnerabilities were reported. 6 vulnerabilities from 1 
+ package was ignored. 
+
++==============================================================================+[0m
+
+
+[33m[1m+===========================================================================================================================================================================================+[0m
+
+
+[31m[1mDEPRECATED: [0m[33m[1mthis command (`check`) has been DEPRECATED, and will be unsupported beyond 01 June 2024.[0m
+
+
+[32mWe highly encourage switching to the new [0m[32m[1m`scan`[0m[32m command which is easier to use, more powerful, and can be set up to mimic the deprecated command if required.[0m
+
+
+[33m[1m+===========================================================================================================================================================================================+[0m
+
+

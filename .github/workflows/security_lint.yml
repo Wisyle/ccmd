@@ -1,0 +1,48 @@
+name: Security Linting
+
+on: [push, pull_request]
+
+jobs:
+  check-subprocess:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check for unsafe subprocess calls
+        run: |
+          # Find all subprocess.run calls with shell=True
+          UNSAFE=$(grep -r "subprocess.run.*shell=True" \
+            --include="*.py" \
+            --exclude-dir="tests" \
+            ccmd/ || true)
+          
+          # Whitelist: only executor.py and security.py can use shell=True
+          UNSAFE=$(echo "$UNSAFE" | grep -v "executor.py" | grep -v "security.py" || true)
+          
+          if [ -n "$UNSAFE" ]; then
+            echo "ERROR: Unsafe subprocess.run(shell=True) found:"
+            echo "$UNSAFE"
+            exit 1
+          fi
+          echo "✓ No unsafe subprocess calls found"
+      
+      - name: Check for hardcoded secrets
+        run: |
+          # Check for potential hardcoded secrets
+          SECRETS=$(grep -r -E "(api_key|secret|password|token)\s*=\s*['\"][^'\"]+['\"]" \
+            --include="*.py" \
+            --exclude-dir="tests" \
+            ccmd/ | grep -v "password_choice" | grep -v "password_badge" || true)
+          
+          if [ -n "$SECRETS" ]; then
+            echo "WARNING: Potential hardcoded secrets found:"
+            echo "$SECRETS"
+            echo "Please review these lines carefully"
+          fi
+          echo "✓ Secret scan complete"
+      
+      - name: Run Bandit security scan
+        run: |
+          pip install bandit
+          bandit -r ccmd/ -f txt -ll  # Only show Medium and High severity
+        continue-on-error: true  # Don't fail the build, just report

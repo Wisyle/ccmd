@@ -322,11 +322,19 @@ class CommandExecutor:
             else:
                 # Standard execution
                 if shell:
-                    # shell=True allowed ONLY for predefined system commands
-                    # These are from commands.yaml with type=system/internal
+                    # SECURITY NOTICE: shell=True is required here for specific reasons:
+                    # 1. System commands from commands.yaml need shell features like:
+                    #    - Variable expansion ($HOME, $USER, etc.)
+                    #    - Glob patterns (*.txt, ~/Documents/*)
+                    #    - Pipes and redirections (ps aux | grep python)
+                    #    - Shell built-ins (cd, export, source)
+                    # 2. This is ONLY allowed for predefined system/internal commands
+                    # 3. User-defined custom commands NEVER get shell=True
+                    # 4. All commands go through security validation before reaching here
+                    # 5. This is a conscious security trade-off for functionality
                     result = subprocess.run(
                         command,
-                        shell=True,
+                        shell=True,  # nosec B602
                         capture_output=True,
                         text=True,
                         timeout=180  # Increased from 30 to 180 seconds for slow commands
