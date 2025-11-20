@@ -11,11 +11,11 @@
 > Replace long, repetitive terminal syntax with short, intuitive commands.
 > Works on **Linux**, **Windows PowerShell**, and **WSL** — safe, rollback-ready, and open source.
 
-> **🔒 New in v1.1.5:** Advanced Security Release! Internal flag protection, atomic shell writes, path diagnostics, threat model documentation, and automated dependency scanning. [See Security Report](SECURITY_CHANGELOG.md)
+> **🔧 New in v1.1.6:** Bug Fix Release! Fixed critical argument passing bug and command chaining password bypass. Commands like `sudo apt update` now work correctly.
+
+> **🔒 v1.1.5:** Advanced Security Release! Internal flag protection, atomic shell writes, path diagnostics, threat model documentation, and automated dependency scanning. [See Security Report](SECURITY_CHANGELOG.md)
 
 > **🛡️ v1.1.4:** Security Hardening Release! 0 HIGH vulnerabilities, comprehensive security audit, automated scanning, and professional security documentation.
-
-> **✨ v1.1.3:** Bug Fix Release! Fixed command chaining directory persistence, interactive timeout issues, and pip install warnings.
 
 > **⚠️ Important:** CCMD is a powerful tool that sits between your shell and you. Like electricity or any powerful tool, **it can be dangerous if used wrongly**. Please read the [Security Policy](SECURITY.md) and [Threat Model](THREAT_MODEL.md) before using CCMD. Use carefully, cautiously, and responsibly.
 

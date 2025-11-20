@@ -2,43 +2,23 @@
 # This file defines what features to display in showcase.py
 # Update this file when releasing new versions
 
-version: "1.1.5"
-release_date: "October 30, 2025"
-subtitle: "Advanced Security Release — Comprehensive Threat Model & Protection"
+version: "1.1.6"
+release_date: "November 20, 2025"
+subtitle: "Bug Fix Release — Argument Passing & Chaining Security"
 
 # Main feature sections
 sections:
-  - title: "Advanced Security Enhancements"
-    emoji: "🔒"
+  - title: "Critical Bug Fixes"
+    emoji: "🔧"
     type: "security"
     items:
       - number: 1
-        title: "Internal Flag Protection"
-        description: "--exec flag hidden from help, environment-gated (CCMD_INTERNAL=1) for internal use only"
+        title: "Argument Passing Fix"
+        description: "Commands with placeholders now pass ALL arguments, not just the first one"
 
       - number: 2
-        title: "Atomic Shell Config Writes"
-        description: "Prevents corruption with temp file + atomic rename pattern, auto-recovery on failure"
-
-      - number: 3
-        title: "Path Diagnostics Command"
-        description: "--check-paths validates CCMD_HOME, installation directory, files, and backups"
-
-      - number: 4
-        title: "Threat Model Documentation"
-        description: "Complete attack scenarios, mitigations, and security boundaries in THREAT_MODEL.md"
-
-      - number: 5
-        title: "Recovery Guide"
-        description: "Emergency procedures for all failure scenarios in RECOVERY.md"
-
-      - number: 6
-        title: "Automated Dependency Scanning"
-        description: "Dependabot weekly scans + Safety scanner integrated in CI workflow"
-
-      - number: 7
-        title: "Enhanced Shell Safety"
-        description: "Shell syntax validation, atomic writes with backup, auto-rollback"
+        title: "Command Chaining Security"
+        description: "Password-protected commands in chains now properly require authentication"
 
   - title: "Security Infrastructure"
     emoji: "🛡️"
@@ -112,29 +92,17 @@ sections:
 
 # Release statistics
 statistics:
-  - label: "Security Audit Items"
-    value: "7/7 Fixed"
+  - label: "Bugs Fixed"
+    value: "2"
     color: "green"
 
   - label: "Files Changed"
-    value: "8"
+    value: "4"
     color: "blue"
 
-  - label: "New Features"
-    value: "4"
+  - label: "Security Issues"
+    value: "1 Fixed"
     color: "yellow"
-
-  - label: "New Docs"
-    value: "3"
-    color: "magenta"
-
-  - label: "Code Added"
-    value: "1,458 lines"
-    color: "cyan"
-
-  - label: "Automated Tests"
-    value: "18 PASSING"
-    color: "green"
 
   - label: "Breaking Changes"
     value: "0"
@@ -143,20 +111,16 @@ statistics:
 # Footer information
 footer:
   badges:
-    - text: "Security Enhanced"
-    - text: "Threat Model Documented"
-    - text: "Emergency Recovery Ready"
+    - text: "Bug Fix Release"
+    - text: "Security Patched"
     - text: "100% Backward Compatible"
 
   links:
-    download: "https://github.com/Wisyle/ccmd/releases/tag/v1.1.5"
+    download: "https://github.com/Wisyle/ccmd/releases/tag/v1.1.6"
     docs: "https://github.com/Wisyle/ccmd"
     security: "https://github.com/Wisyle/ccmd/security"
-    threat_model: "https://github.com/Wisyle/ccmd/blob/ccmd/THREAT_MODEL.md"
-    recovery: "https://github.com/Wisyle/ccmd/blob/ccmd/RECOVERY.md"
 
   credits:
     developer: "De Catalyst (@Wisyle)"
     license: "MIT License"
     warning: "Security-first CLI tool. Report vulnerabilities to Robert5560newton@gmail.com"
-    acknowledgment: "Security audit feedback implemented from community reviewer"
