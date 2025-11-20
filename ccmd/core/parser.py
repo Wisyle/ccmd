@@ -140,12 +140,13 @@ class CommandParser:
         else:
             # Generic parameter handling
             if args:
-                # If single arg, try to match to placeholder
+                # Match args to placeholder
                 action = command_def.get('action', '')
                 if isinstance(action, str):
                     param_name = self._extract_param_name(action)
                     if param_name:
-                        parameters[param_name] = args[0]
+                        # Join all args - fixes bug where only first arg was passed
+                        parameters[param_name] = ' '.join(args)
                 elif isinstance(action, dict):
                     # For dict actions, parameters might apply to subcommands
                     parameters['args'] = args

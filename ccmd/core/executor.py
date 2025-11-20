@@ -287,10 +287,9 @@ class CommandExecutor:
                 # Return the cd command in stdout for our special handler to process
                 return 0, formatted_action, ""
 
-            # Execute normally (but skip chaining check to avoid recursion)
+            # Execute with security checks (password protection, sensitive detection)
             is_interactive = cmd_def.get('interactive', False)
-            allow_shell = cmd_def.get('type') in ['system', 'internal']
-            return self.execute(formatted_action, interactive=is_interactive, shell=allow_shell)
+            return self.execute_with_security(formatted_action, command_def=cmd_def, interactive=is_interactive)
 
     def execute(self, command: str, interactive: bool = False,
                 shell: bool = False) -> Tuple[int, str, str]:
