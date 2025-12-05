@@ -21,13 +21,13 @@ sections:
     features:
       - icon: "❌"
         title: "Before (Bug)"
-        description: "go tarpay in chain defaulted to ~/Downloads"
-        example: "tpc → go tarpay >>> claude → went to Downloads!"
+        description: "go <dirname> in chain defaulted to ~/Downloads"
+        example: "mycommand → go projects >>> ls → went to Downloads!"
 
       - icon: "✅"
         title: "After (Fixed)"
-        description: "go tarpay in chain now searches and finds correct directory"
-        example: "tpc → go tarpay >>> claude → searches → finds /path/to/tarpay"
+        description: "go <dirname> in chain now searches and finds correct directory"
+        example: "mycommand → go projects >>> ls → searches → finds /home/user/projects"
 
   - title: "Technical Changes"
     emoji: "🔬"
