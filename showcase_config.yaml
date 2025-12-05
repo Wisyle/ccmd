@@ -2,106 +2,68 @@
 # This file defines what features to display in showcase.py
 # Update this file when releasing new versions
 
-version: "1.1.6"
-release_date: "November 20, 2025"
-subtitle: "Bug Fix Release — Argument Passing & Chaining Security"
+version: "1.1.7"
+release_date: "December 5, 2025"
+subtitle: "Bug Fix Release — Directory Search in Command Chains"
 
 # Main feature sections
 sections:
-  - title: "Critical Bug Fixes"
+  - title: "Critical Bug Fix"
     emoji: "🔧"
     type: "security"
     items:
       - number: 1
-        title: "Argument Passing Fix"
-        description: "Commands with placeholders now pass ALL arguments, not just the first one"
+        title: "Directory Search in Chains"
+        description: "go <dirname> now correctly searches for directories when used in command chains"
 
-      - number: 2
-        title: "Command Chaining Security"
-        description: "Password-protected commands in chains now properly require authentication"
-
-  - title: "Security Infrastructure"
-    emoji: "🛡️"
+  - title: "What Was Fixed"
+    emoji: "🎯"
     features:
-      - icon: "🩺"
-        title: "Path Diagnostics"
-        description: "New --check-paths command validates entire installation"
-        example: "Checks CCMD_HOME, run.py, commands.yaml, shell config, backups"
+      - icon: "❌"
+        title: "Before (Bug)"
+        description: "go tarpay in chain defaulted to ~/Downloads"
+        example: "tpc → go tarpay >>> claude → went to Downloads!"
 
-      - icon: "⚛️"
-        title: "Atomic Writes"
-        description: "Shell config modifications use atomic rename pattern"
-        example: "Write to temp → validate → atomic rename → auto-recovery"
+      - icon: "✅"
+        title: "After (Fixed)"
+        description: "go tarpay in chain now searches and finds correct directory"
+        example: "tpc → go tarpay >>> claude → searches → finds /path/to/tarpay"
 
-      - icon: "🔐"
-        title: "Environment Gating"
-        description: "Internal flags protected by environment variables"
-        example: "CCMD_INTERNAL=1 required for internal command execution"
-
-      - icon: "📦"
-        title: "Dependabot Integration"
-        description: "Weekly automated dependency vulnerability scanning"
-        example: "Python packages and GitHub Actions monitored"
-
+  - title: "Technical Changes"
+    emoji: "🔬"
+    features:
       - icon: "🔍"
-        title: "Safety Scanner"
-        description: "Dependency vulnerability checking in CI pipeline"
-        example: "Checks requirements.txt for known CVEs"
-
-  - title: "New Documentation"
-    emoji: "📖"
-    features:
-      - icon: "🛡️"
-        title: "THREAT_MODEL.md"
-        description: "Comprehensive threat analysis and security boundaries"
-        example: "Attack scenarios, mitigations, incident response"
-
-      - icon: "🚑"
-        title: "RECOVERY.md"
-        description: "Emergency recovery procedures for all platforms"
-        example: "Linux, Mac, Windows, WSL recovery guides"
-
-      - icon: "🧪"
-        title: "TESTING.md"
-        description: "Complete testing guide with 18 automated tests"
-        example: "Security tests, unit tests, manual test checklists"
+        title: "_search_directory() Method"
+        description: "New helper method added to CommandExecutor class"
+        example: "Searches common locations up to 3 levels deep"
 
       - icon: "📝"
-        title: "Updated SECURITY_CHANGELOG.md"
-        description: "Full v1.1.5 security improvements documented"
-        example: "All 7 audit items addressed with code references"
+        title: "search_dir Parameter Handling"
+        description: "Added check in _execute_ccmd_command() for unknown directories"
+        example: "Now mirrors main.py's directory search behavior"
 
-  - title: "Security Metrics"
-    emoji: "📊"
+  - title: "Previous Fixes (v1.1.6)"
+    emoji: "📦"
     type: "improvements"
     items:
-      - title: "0 HIGH Severity Issues"
-        description: "Maintained clean security posture from v1.1.4"
+      - title: "Argument Passing Fix"
+        description: "Commands with placeholders pass ALL arguments, not just first"
 
-      - title: "All 7 Audit Items Addressed"
-        description: "Community security review recommendations fully implemented"
-
-      - title: "18 Automated Tests Passing"
-        description: "Comprehensive test suite validates all security features"
-
-      - title: "Bandit Scan: PASSING"
-        description: "0 HIGH, 5 MEDIUM (documented), 46 LOW (normal)"
-
-      - title: "Safety Check: PASSING"
-        description: "0 known vulnerabilities in dependencies"
+      - title: "Command Chaining Security"
+        description: "Password-protected commands in chains require authentication"
 
 # Release statistics
 statistics:
   - label: "Bugs Fixed"
-    value: "2"
+    value: "1"
     color: "green"
 
-  - label: "Files Changed"
-    value: "4"
+  - label: "Methods Added"
+    value: "1"
     color: "blue"
 
-  - label: "Security Issues"
-    value: "1 Fixed"
+  - label: "Lines Changed"
+    value: "~70"
     color: "yellow"
 
   - label: "Breaking Changes"
@@ -112,11 +74,11 @@ statistics:
 footer:
   badges:
     - text: "Bug Fix Release"
-    - text: "Security Patched"
+    - text: "Chain Commands Working"
     - text: "100% Backward Compatible"
 
   links:
-    download: "https://github.com/Wisyle/ccmd/releases/tag/v1.1.6"
+    download: "https://github.com/Wisyle/ccmd/releases/tag/v1.1.7"
     docs: "https://github.com/Wisyle/ccmd"
     security: "https://github.com/Wisyle/ccmd/security"
 

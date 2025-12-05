@@ -268,6 +268,18 @@ class CommandExecutor:
         if 'error' in parameters:
             return 1, "", parameters['error']
 
+        # Handle directory search for 'go' command (v1.1.7 fix)
+        # When 'go <dirname>' is called and dirname isn't a known subcommand,
+        # we need to search for it just like main.py does
+        if 'search_dir' in parameters:
+            dir_name = parameters['search_dir']
+            print(f"  (searching for directory: {dir_name})", file=sys.stderr)
+            found_path = self._search_directory(dir_name)
+            if found_path:
+                return 0, f"cd {found_path}", ""
+            else:
+                return 1, "", f"Directory '{dir_name}' not found"
+
         # Get the action (using subcommand and os_type)
         os_type = self.system_info.os_type if self.system_info else None
         action = parser.get_action(cmd_name, subcommand, os_type)
@@ -423,6 +435,66 @@ class CommandExecutor:
         # Method 3: Fallback to environment variable even if invalid
         # (let the command fail with a clear error message)
         return env_ccmd_home or str(ccmd_home)
+
+    def _search_directory(self, dir_name: str) -> Optional[str]:
+        """
+        Search for a directory by name in common locations (v1.1.7)
+
+        This mirrors the search_directory function in main.py for use
+        in command chaining when 'go <dir>' needs to find a directory.
+
+        Args:
+            dir_name: Directory name to search for
+
+        Returns:
+            Full path to directory if found, None otherwise
+        """
+        # Common search locations
+        if sys.platform == 'win32':
+            username = os.environ.get('USERNAME', '')
+            search_paths = []
+            if username:
+                search_paths.extend([
+                    f"C:\\Users\\{username}",
+                    f"C:\\Users\\{username}\\Downloads",
+                    f"C:\\Users\\{username}\\Documents",
+                    f"C:\\Users\\{username}\\Desktop",
+                    f"C:\\Users\\{username}\\targlobal",
+                ])
+            search_paths.append(os.path.expanduser("~"))
+        else:
+            # Linux/macOS/WSL
+            search_paths = [
+                os.path.expanduser("~"),
+                "/mnt/c/Users/rober",
+                "/mnt/c/Users/rober/Downloads",
+                "/mnt/c/Users/rober/targlobal",
+            ]
+
+        # Search up to 3 levels deep in each path
+        for base_path in search_paths:
+            if not os.path.exists(base_path):
+                continue
+
+            try:
+                for root, dirs, files in os.walk(base_path):
+                    # Calculate depth
+                    depth = root[len(base_path):].count(os.sep)
+
+                    # Limit search depth to 3
+                    if depth >= 3:
+                        dirs[:] = []  # Don't descend further
+                        continue
+
+                    # Check for exact match (case-insensitive)
+                    for d in dirs:
+                        if d.lower() == dir_name.lower():
+                            return os.path.join(root, d)
+
+            except PermissionError:
+                continue
+
+        return None
 
     def _execute_interactive(self, command: str) -> Tuple[int, str, str]:
         """
