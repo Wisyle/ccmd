@@ -7,7 +7,7 @@
 
 ## Summary
 
-This release fixes a critical bug where the `go <dirname>` command would fail to search for directories when used inside command chains. Previously, `go tarpay` in a chain like `go tarpay >>> claude` would incorrectly navigate to `~/Downloads` instead of searching for the `tarpay` directory.
+This release fixes a critical bug where the `go <dirname>` command would fail to search for directories when used inside command chains. Previously, `go myproject` in a chain like `go myproject >>> ls` would incorrectly navigate to `~/Downloads` instead of searching for the `myproject` directory.
 
 ---
 
@@ -15,27 +15,27 @@ This release fixes a critical bug where the `go <dirname>` command would fail to
 
 ### 1. Directory Search in Command Chains (Critical)
 
-**Issue:** When using `go <dirname>` inside a command chain (e.g., `go tarpay >>> claude`), the directory search functionality was bypassed. Instead of searching for the directory, it would default to the first entry in the `go` command's action dict (`downloads`).
+**Issue:** When using `go <dirname>` inside a command chain (e.g., `go myproject >>> ls`), the directory search functionality was bypassed. Instead of searching for the directory, it would default to the first entry in the `go` command's action dict (`downloads`).
 
 **Root Cause:** The `_execute_ccmd_command` method in `executor.py` didn't handle the `search_dir` parameter that the parser sets when a directory name isn't a known subcommand.
 
 **Before:**
 ```bash
-# Custom command: tpc → go tarpay >>> claude
-$ tpc
-→ Step 1/2: go tarpay
+# Custom command: devwork → go myproject >>> ls
+$ devwork
+→ Step 1/2: go myproject
   (executing CCMD command: go)
   (changed directory to: /home/user/Downloads)  # WRONG!
 ```
 
 **After:**
 ```bash
-# Custom command: tpc → go tarpay >>> claude
-$ tpc
-→ Step 1/2: go tarpay
+# Custom command: devwork → go myproject >>> ls
+$ devwork
+→ Step 1/2: go myproject
   (executing CCMD command: go)
-  (searching for directory: tarpay)
-  (changed directory to: /mnt/c/Users/rober/targlobal/tarpay)  # CORRECT!
+  (searching for directory: myproject)
+  (changed directory to: /home/user/projects/myproject)  # CORRECT!
 ```
 
 **Files Changed:**
@@ -53,7 +53,7 @@ Added a new helper method to `CommandExecutor` class that mirrors the `search_di
 ```python
 def _search_directory(self, dir_name: str) -> Optional[str]:
     """Search for directory by name in common locations"""
-    # Searches ~/Downloads, ~/Documents, ~/Desktop, ~/targlobal
+    # Searches ~/, ~/Downloads, ~/Documents, ~/Desktop, and more
     # Up to 3 levels deep, case-insensitive matching
 ```
 
