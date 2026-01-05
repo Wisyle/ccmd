@@ -8,7 +8,7 @@ questionary>=2.0.0
 
 # Git integration for smart push command
 # Pinned to 3.1.43 to avoid security vulnerabilities in earlier versions
-GitPython==3.1.45
+GitPython==3.1.46
 
 # Password hashing for v1.1.1 security features
 bcrypt>=4.0.0
