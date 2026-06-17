@@ -7,8 +7,6 @@ commands:
       desktop: cd ~/Desktop
       home: cd ~
       ccmd: cd $CCMD_HOME
-      lhs: cd /mnt/c/Users/rober/targlobal/LHS
-      lha: cd /mnt/c/Users/rober/targlobal/LHA
     type: navigation
   push:
     description: Git add, commit, and push

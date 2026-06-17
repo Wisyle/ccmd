@@ -449,27 +449,12 @@ class CommandExecutor:
         Returns:
             Full path to directory if found, None otherwise
         """
-        # Common search locations
-        if sys.platform == 'win32':
-            username = os.environ.get('USERNAME', '')
-            search_paths = []
-            if username:
-                search_paths.extend([
-                    f"C:\\Users\\{username}",
-                    f"C:\\Users\\{username}\\Downloads",
-                    f"C:\\Users\\{username}\\Documents",
-                    f"C:\\Users\\{username}\\Desktop",
-                    f"C:\\Users\\{username}\\targlobal",
-                ])
-            search_paths.append(os.path.expanduser("~"))
-        else:
-            # Linux/macOS/WSL
-            search_paths = [
-                os.path.expanduser("~"),
-                "/mnt/c/Users/rober",
-                "/mnt/c/Users/rober/Downloads",
-                "/mnt/c/Users/rober/targlobal",
-            ]
+        # Search standard user directories derived from the home folder,
+        # so no paths are hardcoded to a specific user.
+        home = os.path.expanduser("~")
+        search_paths = [home]
+        for sub in ("Downloads", "Documents", "Desktop", "Projects", "Code", "Developer"):
+            search_paths.append(os.path.join(home, sub))
 
         # Search up to 3 levels deep in each path
         for base_path in search_paths:

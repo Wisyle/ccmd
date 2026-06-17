@@ -202,6 +202,27 @@ def get_favorite_commands(limit=5):
         return []
 
 
+def _get_search_paths():
+    """Build a list of standard user directories to search.
+
+    Derived from the home directory so no paths are hardcoded to a
+    specific user. On Windows the user profile lives under
+    %USERPROFILE% (``os.path.expanduser('~')``); on Unix it is $HOME.
+    """
+    home = os.path.expanduser("~")
+    candidates = [home]
+    for sub in ("Downloads", "Documents", "Desktop", "Projects", "Code", "Developer"):
+        candidates.append(os.path.join(home, sub))
+    # De-duplicate while preserving order
+    seen = set()
+    paths = []
+    for p in candidates:
+        if p not in seen:
+            seen.add(p)
+            paths.append(p)
+    return paths
+
+
 def search_directory(dir_name: str) -> str:
     """
     Search for a directory by name in common locations
@@ -212,29 +233,7 @@ def search_directory(dir_name: str) -> str:
     Returns:
         Full path to directory if found, None otherwise
     """
-    import subprocess
-
-    # Common search locations
-    if sys.platform == 'win32':
-        # More targeted search paths for Windows
-        username = os.getenv('USERNAME')
-        search_paths = []
-        if username:
-            search_paths.extend([
-                f"C:\\Users\\{username}",
-                f"C:\\Users\\{username}\\Downloads",
-                f"C:\\Users\\{username}\\Documents",
-                f"C:\\Users\\{username}\\Desktop",
-                f"C:\\Users\\{username}\\targlobal",
-            ])
-        search_paths.append(os.path.expanduser("~"))
-    else:
-        search_paths = [
-            os.path.expanduser("~"),
-            "/mnt/c/Users/rober",
-            "/mnt/c/Users/rober/Downloads",
-            "/mnt/c/Users/rober/targlobal",
-        ]
+    search_paths = _get_search_paths()
 
     debug_print(f"Searching for directory: {dir_name}")
 
