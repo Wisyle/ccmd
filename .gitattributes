@@ -1,0 +1,20 @@
+# Normalize line endings across platforms
+* text=auto eol=lf
+
+# Shell scripts must stay LF
+*.sh text eol=lf
+*.py text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+
+# PowerShell scripts use CRLF on Windows by convention
+*.ps1 text eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
