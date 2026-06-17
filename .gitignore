@@ -53,3 +53,6 @@ htmlcov/
 *.bak
 *.backup
 *~
+
+# Claude project instructions (private)
+claude-instructions.md
