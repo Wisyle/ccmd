@@ -25,10 +25,15 @@ class CommandRegistry:
         # Path for custom user commands
         self.custom_config_path = Path.home() / ".ccmd" / "custom_commands.yaml"
 
+        # Path for user-defined go-shortcuts (name -> absolute path)
+        self.shortcuts_path = Path.home() / ".ccmd" / "shortcuts.yaml"
+
         self.commands: Dict[str, Dict[str, Any]] = {}
         self.custom_commands: Dict[str, Dict[str, Any]] = {}
+        self.user_shortcuts: Dict[str, str] = {}
         self._load_commands()
         self._load_custom_commands()
+        self._load_user_shortcuts()
 
     def _get_default_config_path(self) -> Path:
         """Get the default config path"""
@@ -116,10 +121,79 @@ class CommandRegistry:
         except Exception as e:
             raise RuntimeError(f"Failed to save custom commands to {self.custom_config_path}: {e}")
 
+    def _load_user_shortcuts(self):
+        """Load user-defined go-shortcuts (a flat name -> path map).
+
+        Format of ~/.ccmd/shortcuts.yaml:
+            projects: /home/user/code/projects
+            work: /home/user/work
+
+        Missing or corrupt file is non-fatal: we just log a warning and
+        continue with no user shortcuts, mirroring _load_custom_commands.
+        """
+        if not self.shortcuts_path.exists():
+            self.user_shortcuts = {}
+            return
+
+        try:
+            with open(self.shortcuts_path, 'r', encoding='utf-8') as f:
+                data = yaml.safe_load(f)
+            if data is None:
+                self.user_shortcuts = {}
+            elif isinstance(data, dict):
+                # Only keep string -> str pairs; coerce values to str for safety
+                self.user_shortcuts = {
+                    str(k): str(v) for k, v in data.items() if v is not None
+                }
+            else:
+                print(f"Warning: shortcuts.yaml must be a mapping, got {type(data).__name__}")
+                self.user_shortcuts = {}
+        except Exception as e:
+            # Don't raise for shortcuts, just warn (non-fatal)
+            print(f"Warning: Failed to load shortcuts from {self.shortcuts_path}: {e}")
+            self.user_shortcuts = {}
+
+    def save_user_shortcuts(self):
+        """Persist user shortcuts to ~/.ccmd/shortcuts.yaml with a .yaml.bak backup"""
+        try:
+            self.shortcuts_path.parent.mkdir(parents=True, exist_ok=True)
+
+            if self.shortcuts_path.exists():
+                backup_path = self.shortcuts_path.with_suffix('.yaml.bak')
+                shutil.copy2(self.shortcuts_path, backup_path)
+
+            with open(self.shortcuts_path, 'w', encoding='utf-8') as f:
+                # Keep human-readable ordering (insertion order of the dict)
+                yaml.safe_dump(self.user_shortcuts, f, default_flow_style=False, sort_keys=False)
+        except Exception as e:
+            raise RuntimeError(f"Failed to save shortcuts to {self.shortcuts_path}: {e}")
+
+    def add_shortcut(self, name: str, path: str):
+        """Add or update a user go-shortcut (name -> path). Persists immediately."""
+        self.user_shortcuts[name] = str(path)
+        self.save_user_shortcuts()
+
+    def remove_shortcut(self, name: str) -> bool:
+        """Remove a user go-shortcut by name. Returns True if it existed. Persists."""
+        if name in self.user_shortcuts:
+            del self.user_shortcuts[name]
+            self.save_user_shortcuts()
+            return True
+        return False
+
+    def list_user_shortcuts(self) -> Dict[str, str]:
+        """Return a copy of the user shortcuts map (name -> path)"""
+        return dict(self.user_shortcuts)
+
     def get_command(self, name: str) -> Optional[Dict[str, Any]]:
         """
         Get a command definition by name
         Custom commands override default commands if same name exists
+
+        For the 'go' command specifically, user-defined shortcuts
+        (from ~/.ccmd/shortcuts.yaml) are merged into its action dict so
+        that `go <shortcut>` resolves. User shortcuts override the
+        built-in ones on name collision.
 
         Args:
             name: Command name
@@ -130,7 +204,25 @@ class CommandRegistry:
         # Check custom commands first (they override defaults)
         if name in self.custom_commands:
             return self.custom_commands.get(name)
-        return self.commands.get(name)
+
+        cmd = self.commands.get(name)
+
+        # Merge user shortcuts into the go command's action map.
+        # We return a shallow copy so we never mutate the source def.
+        if name == 'go' and cmd and isinstance(cmd.get('action'), dict) and self.user_shortcuts:
+            merged = dict(cmd)
+            merged_action = dict(cmd['action'])
+            for short_name, short_path in self.user_shortcuts.items():
+                # Normalize to a `cd <path>` action, matching the existing
+                # shape of go's action entries (e.g. 'home: cd ~')
+                if short_path.startswith(('cd ', 'cd\t')):
+                    merged_action[short_name] = short_path
+                else:
+                    merged_action[short_name] = f"cd {short_path}"
+            merged['action'] = merged_action
+            return merged
+
+        return cmd
 
     def has_command(self, name: str) -> bool:
         """
@@ -234,9 +326,10 @@ class CommandRegistry:
         return True
 
     def reload(self):
-        """Reload commands from files (both default and custom)"""
+        """Reload commands from files (default, custom, and shortcuts)"""
         self._load_commands()
         self._load_custom_commands()
+        self._load_user_shortcuts()
 
 
 def create_default_config(path: Path):
