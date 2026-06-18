@@ -18,8 +18,10 @@ Works on **Linux**, **Windows PowerShell**, and **WSL**.
 
 ```bash
 pip install ccmd
-ccmd --install   # one-time shell integration
+ccmd --install   # one-time shell integration + setup wizard
 ```
+
+On first install you'll be prompted to register your favorite directories — these power the `go` command. Skip it or redo it anytime with `ccmd setup`.
 
 ---
 
@@ -46,6 +48,7 @@ ccmd replaces long, forgettable terminal syntax with commands you define yoursel
 | Command | What it does |
 |---------|-------------|
 | `go <dir>` | Jump to any directory by name — searches your entire system |
+| `setup` | Register your directory shortcuts and set a master password |
 | `push` | Interactive git add, commit, and push in one command |
 | `cpu` | Live CPU usage |
 | `mem` | Memory usage |
@@ -77,6 +80,28 @@ ccmd add
 # Then just type:
 devstart
 ```
+
+## Directory shortcuts
+
+The `go` command remembers your folders. Register them once:
+
+```bash
+ccmd setup          # interactive wizard
+# or edit ~/.ccmd/shortcuts.yaml directly:
+```
+
+```yaml
+# ~/.ccmd/shortcuts.yaml
+projects: /home/user/code/projects
+work:     /home/user/work
+```
+
+```bash
+go projects         # → cd /home/user/code/projects
+go work             # → cd /home/user/work
+```
+
+Built-in shortcuts (`downloads`, `documents`, `desktop`, `home`) are always available. Your shortcuts take priority if there's a name collision.
 
 ---
 

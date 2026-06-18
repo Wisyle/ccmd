@@ -17,6 +17,31 @@ go desktop      # cd ~/Desktop
 go home         # cd ~
 ```
 
+### Directory Shortcuts (v1.2.0)
+
+Register your own directories so `go <name>` jumps there instantly:
+
+```bash
+ccmd setup          # interactive wizard — walk you through it
+```
+
+Or edit `~/.ccmd/shortcuts.yaml` directly:
+
+```yaml
+# ~/.ccmd/shortcuts.yaml
+projects: /home/user/code/projects
+work:     /home/user/work
+docs:     /home/user/Documents/writing
+```
+
+```bash
+go projects         # cd /home/user/code/projects
+go work             # cd /home/user/work
+```
+
+Your shortcuts merge with the built-in ones. On a collision, yours win.
+Re-run `ccmd setup` anytime to add or change shortcuts.
+
 ### Git Commands
 
 Streamline your git workflow:
@@ -42,6 +67,7 @@ kap 1234        # Kill process by PID
 ```bash
 update          # Reload commands from commands.yaml
 restore         # Restore shell configuration from backup
+setup           # (v1.2.0) Register directory shortcuts and set master password
 ```
 
 ## Managing Commands
@@ -284,6 +310,6 @@ python3 run.py --check
 
 ## Next Steps
 
-- See [CONFIGURATION.md](CONFIGURATION.md) for advanced configuration
-- See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for common issues
-- See [ARCHITECTURE.md](ARCHITECTURE.md) for technical details
+- See [RELEASE_NOTES_v1.2.0.md](RELEASE_NOTES_v1.2.0.md) for what's new
+- See [SECURITY_CHANGELOG.md](SECURITY_CHANGELOG.md) for security history
+- See [README.md](../README.md) for project overview

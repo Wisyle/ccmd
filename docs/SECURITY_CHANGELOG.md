@@ -2,6 +2,28 @@
 
 This document tracks all security-related changes to CCMD. Each entry includes the version, date, and detailed description of security improvements or fixes.
 
+## v1.2.0 (June 2026)
+
+### Consistency (not a vulnerability)
+
+- **FIX:** `sudo` command `require_password` flag reverted to `true`
+  - Restores consistency between the flag and the command's "password protected" description.
+  - **This was not a security vulnerability.** CCMD's `detect_sensitive_command()` auto-detector (auth.py) independently flags any command string containing the word `sudo` for password gating, so the prompt fired regardless of the YAML flag. The flag is one of two redundant gates; this fix keeps them aligned.
+  - Lines: `commands.yaml` (sudo entry)
+
+### Hardening (de-personalization)
+
+- **FIX:** Removed all hardcoded personal directory paths from shipped code
+  - `commands.yaml`: dropped `lhs`/`lha` shortcuts pointing at the maintainer's machine.
+  - `search_directory()` (main.py + executor.py): no longer hard-codes `/mnt/c/Users/rober/...` or `C:\Users\rober\...`. Now derives standard user folders from `$HOME`.
+  - Impact: every `pip install ccmd` user previously inherited the maintainer's path layout. Now neutral.
+
+### New test coverage
+
+- **ADD:** First committed test suite (`tests/`, 50 tests passing)
+  - `test_security.py`: 13 dangerous injection payloads verified blocked by `CommandSecurityValidator`; custom-command type-enforcement gate verified (`add_command(is_custom=True)` forces `type='custom'`).
+  - Closes the gap noted in the project's own CLAUDE.md, which specified these security tests but no `tests/` directory existed.
+
 ## v1.1.5 (2025-10-30)
 
 ### HIGH Priority Fixes
