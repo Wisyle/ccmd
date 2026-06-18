@@ -153,6 +153,15 @@ def install_ccmd() -> Tuple[bool, str]:
         else:  # bash/zsh
             reload_cmd = f"source {rc_file}"
 
+        # Offer first-run setup wizard on interactive installs. Skipped
+        # silently for scripted/non-TTY installs (CI, automation).
+        try:
+            from ccmd.cli.setup import maybe_run_setup_on_install
+            maybe_run_setup_on_install()
+        except Exception:
+            # Never let the wizard break an otherwise-successful install.
+            pass
+
         return True, f"CCMD installed successfully! Restart your shell or run: {reload_cmd}"
     else:
         return False, message

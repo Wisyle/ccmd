@@ -98,6 +98,11 @@ commands:
     action: python $CCMD_HOME/run.py --init
     type: internal
     interactive: true
+  setup:
+    description: Run the setup wizard to register go-shortcuts and set password (v1.2.0)
+    action: python $CCMD_HOME/run.py --setup
+    type: internal
+    interactive: true
   debug:
     description: Show debug information and system diagnostics
     action: python $CCMD_HOME/run.py --debug

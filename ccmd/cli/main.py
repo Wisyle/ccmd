@@ -306,6 +306,8 @@ def main():
                        help='Change the master password (requires current password)')
     parser.add_argument('--reset-password', action='store_true',
                        help='Reset (delete) master password - use if you forgot it')
+    parser.add_argument('--setup', action='store_true',
+                       help='Run the first-run setup wizard (register go-shortcuts, set password)')
     parser.add_argument('--exec', type=str,
                        help=argparse.SUPPRESS)  # Hidden: internal use only
 
@@ -323,7 +325,8 @@ def main():
     if args.debug and not any([args.install, args.uninstall, args.restore,
                                 args.check, args.check_paths, args.edit, args.test, args.reload,
                                 args.list, args.version, args.update, args.init,
-                                args.change_password, args.reset_password, args.exec, args.command]):
+                                args.change_password, args.reset_password, args.setup,
+                                args.exec, args.command]):
         return handle_debug()
 
     # Handle management flags
@@ -355,6 +358,8 @@ def main():
         return handle_change_password()
     elif args.reset_password:
         return handle_reset_password()
+    elif args.setup:
+        return handle_setup()
     elif args.exec:
         return handle_exec(args.exec)
 
@@ -976,6 +981,16 @@ def handle_init():
         return 1
 
 
+def handle_setup():
+    """Run the first-run setup wizard (v1.2.0).
+
+    Registers user go-shortcuts (~/.ccmd/shortcuts.yaml) and optionally
+    sets a master password. Can be re-run anytime via 'ccmd setup'.
+    """
+    from ccmd.cli.setup import run_setup
+    return run_setup()
+
+
 def handle_change_password():
     """Change the master password"""
     from ccmd.core.auth import change_password_interactive, HAS_BCRYPT
@@ -1132,6 +1147,7 @@ def handle_command(command_name: str, args: list):
         'hi': handle_hi,
         'list': handle_list,
         'init': handle_init,
+        'setup': handle_setup,
         'debug': handle_debug,
         'version': handle_version,
         'reload': handle_reload,
