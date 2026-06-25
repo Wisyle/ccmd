@@ -45,7 +45,7 @@ classifiers = [
 dependencies = [
     "PyYAML>=6.0",
     "questionary>=2.0.0",
-    "GitPython==3.1.45",
+    "GitPython==3.1.46",
     "bcrypt>=4.0.0",
 ]
 
