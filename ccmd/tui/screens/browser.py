@@ -12,6 +12,8 @@ from textual.screen import Screen
 from textual.widgets import Footer, Input, OptionList, Static
 from textual.widgets.option_list import Option
 
+from rich.markup import escape
+
 from ccmd.config.schema import load_config
 from ccmd.core.agents import all_agents, get_agent
 from ccmd.core.fs import default_browse_roots, is_projectish, list_dir_entries
@@ -98,9 +100,9 @@ class DirBrowserScreen(Screen[bool | None]):
         ag = get_agent(self._agent)
         ag_s = f"{ag.ascii_logo} {self._agent}" if ag else self._agent
         bar.update(
-            f"[bold #00ffc8]{self._cwd}[/]{mark}{hidden}  ·  "
-            f"agent [bold #c84bff]{ag_s}[/]"
-            + (f"  [#6a6a80]{extra}[/]" if extra else "")
+            f"[bold #00ffc8]{escape(str(self._cwd))}[/]{mark}{hidden}  ·  "
+            f"agent [bold #c84bff]{escape(ag_s)}[/]"
+            + (f"  [#6a6a80]{escape(extra)}[/]" if extra else "")
         )
 
     def _render_list(self) -> None:
@@ -184,21 +186,21 @@ class DirBrowserScreen(Screen[bool | None]):
         kids = list_dir_entries(resolved, show_hidden=self._show_hidden, dirs_only=True)
         project = is_projectish(resolved)
         lines = [
-            f"[bold #00ffc8]{resolved.name or resolved}[/]",
-            f"path     {resolved}",
+            f"[bold #00ffc8]{escape(str(resolved.name or resolved))}[/]",
+            f"path     {escape(str(resolved))}",
             f"project  {'yes ◆' if project else 'no (still selectable)'}",
             f"subdirs  {len(kids)}",
             "",
             "[#6a6a80]children[/]",
         ]
         for name, _, _ in kids[:12]:
-            lines.append(f"  · {name}/")
+            lines.append(f"  · {escape(name)}/")
         if len(kids) > 12:
             lines.append(f"  … +{len(kids) - 12} more")
         lines.extend(
             [
                 "",
-                "[#6a6a80]↵ open folder · s select as project[/]",
+                "[#6a6a80]enter open folder · s select as project[/]",
             ]
         )
         prev.update("\n".join(lines))

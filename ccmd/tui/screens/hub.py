@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from rich.markup import escape
 from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -176,7 +177,7 @@ class HubScreen(Screen):
                 "[#6a6a80]This list is your saved registry.\n"
                 "Press [bold]f[/] to browse /mnt and subdirs,\n"
                 "or [bold]b[/] for home + all roots.\n"
-                "[bold]][/] cycles default agent on selection.[/]"
+                "Press ] to cycle default agent.[/]"
             )
             return
         agent = get_agent(p.default_agent)
@@ -186,29 +187,32 @@ class HubScreen(Screen):
             else p.default_agent
         )
         exists = "yes" if p.exists() else "MISSING"
-        # agent roster
         roster: list[str] = []
         for i, a in enumerate(self._agent_info, start=1):
             mark = "●" if a["id"] == p.default_agent else "·"
             ready = "✓" if a["installed"] else "✗"
-            roster.append(f"  {mark} {i} {a['logo']} {a['id']:<8} {ready}")
+            roster.append(
+                f"  {mark} {i} {escape(str(a['logo']))} "
+                f"{escape(a['id']):<8} {ready}"
+            )
 
+        # Escape anything that can contain [ ] so Rich markup doesn't explode
         lines = [
-            f"[bold #00ffc8]{p.name}[/]",
-            f"id      {p.id}",
-            f"path    {p.path}",
-            f"root    {_root_label(p.path)}",
+            f"[bold #00ffc8]{escape(p.name)}[/]",
+            f"id      {escape(p.id)}",
+            f"path    {escape(p.path)}",
+            f"root    {escape(_root_label(p.path))}",
             f"exists  {exists}",
-            f"agent   [bold]{agent_line}[/]  (default)",
-            f"ssh     {p.ssh_host or '—'}",
-            f"env     {', '.join(p.env_files) or '—'}",
-            f"tags    {', '.join(p.tags) or '—'}",
-            f"opened  {p.last_opened_at or 'never'}",
+            f"agent   [bold]{escape(agent_line)}[/]  (default)",
+            f"ssh     {escape(p.ssh_host or '—')}",
+            f"env     {escape(', '.join(p.env_files) or '—')}",
+            f"tags    {escape(', '.join(p.tags) or '—')}",
+            f"opened  {escape(p.last_opened_at or 'never')}",
             "",
-            "[bold #c84bff]agents[/]  ]/[ cycle · 1-7 set · A set only · a launch",
+            "[bold #c84bff]agents[/]  keys: ] [ cycle · 1-7 set · A set · a launch",
             *roster,
             "",
-            "[#6a6a80]↵ open · d detach · b/f add from disk[/]",
+            "[#6a6a80]enter open · d detach · b/f add from disk[/]",
         ]
         detail.update("\n".join(lines))
 
@@ -455,19 +459,22 @@ class HubScreen(Screen):
 
 
 def _root_label(path: str) -> str:
-    """Short badge for where the project lives."""
+    """Short badge for where the project lives.
+
+    Uses angle brackets, not square ones — square brackets break Rich markup.
+    """
     p = path.replace("\\", "/")
     if p.startswith("/mnt/vylth"):
-        return "[vylth]"
+        return "<vylth>"
     if p.startswith("/mnt/c"):
-        return "[win-c]"
+        return "<win-c>"
     if p.startswith("/mnt/d"):
-        return "[win-d]"
+        return "<win-d>"
     if p.startswith("/mnt/"):
         part = p.split("/")[2] if len(p.split("/")) > 2 else "mnt"
-        return f"[mnt/{part}]"
+        return f"<mnt/{part}>"
     if p.startswith(str(Path.home())):
-        return "[home]"
+        return "<home>"
     if p.startswith("/opt"):
-        return "[opt]"
-    return "[disk]"
+        return "<opt>"
+    return "<disk>"
