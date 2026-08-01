@@ -30,6 +30,7 @@ class Project:
     name: str
     path: str
     default_agent: str = "claude"
+    short: str = ""  # shell shortcut base, e.g. "ana" → ana/anac/anag…
     tags: list[str] = field(default_factory=list)
     env_files: list[str] = field(default_factory=lambda: [".env"])
     path_prepend: list[str] = field(default_factory=list)
@@ -60,6 +61,7 @@ class Project:
             name=str(data.get("name") or data["id"]),
             path=str(data["path"]),
             default_agent=str(data.get("default_agent") or "claude"),
+            short=str(data.get("short") or ""),
             tags=list(data.get("tags") or []),
             env_files=list(data.get("env_files") or [".env"]),
             path_prepend=list(data.get("path_prepend") or []),
@@ -103,7 +105,7 @@ class ProjectRegistry:
             return None
         return Project.from_dict(data)
 
-    def save(self, project: Project) -> Project:
+    def save(self, project: Project, *, regen_shell: bool = True) -> Project:
         project.updated_at = _now()
         path = self._file(project.id)
         path.write_text(
@@ -111,12 +113,25 @@ class ProjectRegistry:
             encoding="utf-8",
         )
         path.chmod(0o600)
+        if regen_shell:
+            try:
+                from ccmd.core.shell_cmds import write_shell_cmds
+
+                write_shell_cmds()
+            except Exception:
+                pass
         return project
 
     def delete(self, project_id: str) -> bool:
         path = self._file(project_id)
         if path.exists():
             path.unlink()
+            try:
+                from ccmd.core.shell_cmds import write_shell_cmds
+
+                write_shell_cmds()
+            except Exception:
+                pass
             return True
         return False
 
@@ -150,7 +165,7 @@ class ProjectRegistry:
         if not p:
             return
         p.last_opened_at = _now()
-        self.save(p)
+        self.save(p, regen_shell=False)
 
     def fuzzy(self, query: str, limit: int = 50) -> list[Project]:
         projects = self.list()

@@ -20,6 +20,55 @@ from ccmd.core.sessions import SessionStore
 from ccmd.core.ssh import SSHStore
 
 
+def _cmd_shell(args: argparse.Namespace) -> int:
+    from ccmd.core.shell_cmds import (
+        install_shell_hook,
+        list_cmd_rows,
+        shell_cmds_path,
+        write_shell_cmds,
+    )
+
+    sub = args.shell_cmd or "regen"
+    if sub == "install":
+        path = write_shell_cmds()
+        rcs = install_shell_hook()
+        print(f"wrote {path}")
+        for rc in rcs:
+            print(f"hooked {rc}")
+        print("restart shell or:  source ~/.ccmd/shell_cmds.sh")
+        print("then:  ana / anac / anag  …")
+        return 0
+    if sub == "regen":
+        path = write_shell_cmds()
+        print(f"regenerated {path}")
+        rows = list_cmd_rows()
+        for r in rows[:30]:
+            print(
+                f"  {r['short']:<10} {r['project']:<18} "
+                f"default={r['default_agent']:<8}  "
+                f"{r['short']}c/g/x/u/o/a/p"
+            )
+        if len(rows) > 30:
+            print(f"  … +{len(rows) - 30} more  (see {path})")
+        return 0
+    if sub == "list":
+        for r in list_cmd_rows():
+            vars_ = " ".join(
+                f"{k[0]}={v}" for k, v in r["variants"].items()
+            )
+            # show compact
+            v = r["variants"]
+            print(
+                f"{r['short']:<10} {r['project']:<20} "
+                f"{v.get('claude','')} {v.get('grok','')} {v.get('codex','')} "
+                f"{v.get('cursor','')}  → {r['path']}"
+            )
+        print(f"\nfile: {shell_cmds_path()}")
+        return 0
+    print("usage: ccmd shell install|regen|list", file=sys.stderr)
+    return 1
+
+
 def _cmd_open(args: argparse.Namespace) -> int:
     reg = ProjectRegistry()
     project = reg.get(args.project)
@@ -245,6 +294,18 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("mcp", help="Run MCP stdio server")
     sub.add_parser("tui", help="Force open TUI")
 
+    sh = sub.add_parser(
+        "shell",
+        help="Short project commands (ana/anac/anag…) for bash/zsh",
+    )
+    sh.add_argument(
+        "shell_cmd",
+        nargs="?",
+        choices=["install", "regen", "list"],
+        default="regen",
+        help="install=write cmds + hook bashrc; regen=rewrite cmds; list=show",
+    )
+
     return p
 
 
@@ -274,6 +335,7 @@ def main(argv: list[str] | None = None) -> int:
         "aliases": _cmd_aliases,
         "doctor": _cmd_doctor,
         "mcp": _cmd_mcp,
+        "shell": _cmd_shell,
     }
     handler = handlers.get(args.cmd)
     if not handler:

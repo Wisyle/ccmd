@@ -193,9 +193,12 @@ class HubScreen(Screen):
             ready = "ok" if a["installed"] else "no"
             roster.append(f"  {mark} {i} {a['logo']} {a['id']:<8} {ready}")
 
+        short = p.short or p.id[:4]
         lines = [
             p.name,
             f"id      {p.id}",
+            f"short   {short}  →  {short}c claude · {short}g grok · {short}x codex · {short}u cursor",
+            f"        {short}o goose · {short}a aider · {short}p chatgpt · bare {short} = default",
             f"path    {p.path}",
             f"root    {_root_label(p.path)}",
             f"exists  {exists}",
@@ -209,6 +212,7 @@ class HubScreen(Screen):
             *roster,
             "",
             "enter open · d detach · b/f add from disk",
+            "shell: source ~/.ccmd/shell_cmds.sh  (or: ccmd shell install)",
         ]
         detail.update("\n".join(lines))
 
