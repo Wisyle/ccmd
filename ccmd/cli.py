@@ -20,8 +20,8 @@ from ccmd.core.sessions import SessionStore
 from ccmd.core.ssh import SSHStore
 
 
-# agent accent colors for -v lines
-_AGENT_COLORS = {
+# Rich colors for agent columns / badges
+_AGENT_STYLE = {
     "claude": "dark_orange3",
     "grok": "bright_white",
     "codex": "green",
@@ -32,96 +32,121 @@ _AGENT_COLORS = {
 }
 
 
+def _agent_meta() -> list[dict]:
+    """Logo + name + id for every agent (order matches variants)."""
+    from ccmd.core.agents import all_agents
+
+    return [
+        {
+            "id": a.id,
+            "name": a.display_name,
+            "logo": a.ascii_logo,
+            "color": a.brand_color,
+            "style": _AGENT_STYLE.get(a.id, "white"),
+        }
+        for a in all_agents()
+    ]
+
+
 def _print_cmd_rows(rows: list, *, verbose: bool = False) -> None:
-    """Pretty list: base command only. Agent variants only with -v or single match."""
+    """Full ccmds view: base cmd + every agent variant with logo & name."""
     try:
+        from rich import box
         from rich.console import Console
         from rich.table import Table
         from rich.text import Text
 
         console = Console(highlight=False)
-        use_rich = console.is_terminal
+        use_rich = True
     except Exception:
         use_rich = False
 
     if not rows:
-        if use_rich:
-            Console().print("[dim]no matching commands[/]")
-        else:
-            print("no matching commands")
+        print("no matching commands")
         return
 
-    show_variants = verbose or len(rows) == 1
+    agents = _agent_meta()
 
     if use_rich:
         console = Console(highlight=False)
+
+        # legend once
+        legend = Text()
+        legend.append("agents  ", style="dim")
+        for a in agents:
+            legend.append(f"{a['logo']} ", style=a["style"])
+            legend.append(f"{a['name']}", style=a["style"])
+            legend.append("  ", style="dim")
+        console.print(legend)
+        console.print()
+
         table = Table(
             show_header=True,
-            header_style="bold cyan",
+            header_style="bold bright_cyan",
             border_style="bright_black",
-            box=None,
+            box=box.SIMPLE_HEAVY,
             pad_edge=False,
             expand=False,
+            show_lines=False,
         )
         table.add_column("cmd", style="bold bright_cyan", no_wrap=True)
-        table.add_column("project", style="white")
-        table.add_column("agent", style="magenta")
-        table.add_column("path", style="dim", overflow="ellipsis", max_width=48)
+        table.add_column("project", style="white", no_wrap=True)
+        table.add_column("default", style="magenta", no_wrap=True)
+        for a in agents:
+            # header: logo + short id
+            hdr = Text()
+            hdr.append(f"{a['logo']}\n", style=a["style"])
+            hdr.append(a["id"][:6], style=f"dim {a['style']}")
+            table.add_column(hdr, justify="center", no_wrap=True)
+        if verbose:
+            table.add_column("path", style="dim", overflow="ellipsis", max_width=36)
 
         for r in rows:
-            table.add_row(
-                r["short"],
-                r["project"],
-                r["default_agent"],
-                r["path"],
-            )
+            cells: list = [
+                Text(r["short"], style="bold bright_cyan"),
+                Text(r["project"], style="white"),
+                Text(r["default_agent"], style="magenta"),
+            ]
+            for a in agents:
+                fn = r["variants"].get(a["id"], "")
+                is_default = r["default_agent"] == a["id"]
+                style = a["style"] if is_default else f"dim {a['style']}"
+                # mark default with *
+                label = f"{fn}*" if is_default and fn else fn
+                cells.append(Text(label, style=style))
+            if verbose:
+                cells.append(Text(r["path"], style="dim"))
+            table.add_row(*cells)
+
         console.print(table)
-
-        if show_variants:
-            console.print()
-            for r in rows:
-                s = r["short"]
-                console.print(
-                    f"  [bold bright_cyan]{s}[/]  "
-                    f"[dim]→[/]  [white]{r['project']}[/]  "
-                    f"[dim]({r['default_agent']})[/]"
-                )
-                parts = []
-                for aid, fn in r["variants"].items():
-                    color = _AGENT_COLORS.get(aid, "white")
-                    parts.append(f"[{color}]{fn}[/{color}]")
-                console.print("    " + "  ".join(parts))
-                console.print(f"    [dim]{r['path']}[/]")
-
         console.print()
         console.print(
-            f"[dim]{len(rows)} command(s)[/]  "
-            f"[dim]·[/]  [bright_cyan]ccmds <name>[/][dim] for agent variants[/]  "
-            f"[dim]·[/]  [bright_cyan]ccmds -v[/][dim] show all variants[/]"
+            f"[dim]{len(rows)} project(s)[/]  "
+            f"[dim]·[/]  [bright_cyan]cmd[/][dim] = default agent[/]  "
+            f"[dim]·[/]  [bright_cyan]*[/][dim] = project default[/]  "
+            f"[dim]·[/]  [bright_cyan]ccmds ana[/][dim] filter[/]  "
+            f"[dim]·[/]  [bright_cyan]ccmds -v[/][dim] show paths[/]"
         )
         return
 
-    # plain fallback
-    print(f"{'CMD':<10} {'PROJECT':<22} {'AGENT':<10} PATH")
-    print("-" * 72)
+    # plain fallback — still show all agent cmds
+    headers = ["cmd", "project", "default"] + [a["id"][:6] for a in agents]
+    print("  ".join(f"{h:<10}" for h in headers))
+    print("-" * (12 * len(headers)))
     for r in rows:
-        print(
-            f"{r['short']:<10} {r['project']:<22} "
-            f"{r['default_agent']:<10} {r['path']}"
-        )
-        if show_variants:
-            print(
-                "           agents: "
-                + "  ".join(f"{fn}" for fn in r["variants"].values())
-            )
-    print(f"\n{len(rows)} command(s)  ·  ccmds <name> for agent variants  ·  ccmds -v")
+        cols = [r["short"], r["project"], r["default_agent"]]
+        for a in agents:
+            cols.append(r["variants"].get(a["id"], ""))
+        print("  ".join(f"{c:<10}" for c in cols))
+        if verbose:
+            print(f"           {r['path']}")
+    print(f"\n{len(rows)} project(s)  ·  * default agent on project")
 
 
 def _cmd_shell(args: argparse.Namespace) -> int:
     from ccmd.core.shell_cmds import (
         install_shell_hook,
         list_cmd_rows,
-        shell_cmds_path,
         write_shell_cmds,
     )
 
@@ -136,30 +161,22 @@ def _cmd_shell(args: argparse.Namespace) -> int:
         for rc in rcs:
             print(f"hooked {rc}")
         print("restart shell or:  source ~/.ccmd/shell_cmds.sh")
-        print("then:  ccmds          # list base commands (color)")
-        print("       ccmds ana      # agent variants for one project")
+        print("then:  ccmds          # all cmds + agents with logos")
+        print("       ccmds ana      # filter one project")
         print("       ana / anac / anag  …")
         if verbose:
-            _print_cmd_rows(list_cmd_rows(), verbose=False)
+            _print_cmd_rows(list_cmd_rows(), verbose=True)
         return 0
     if sub == "regen":
         path, shorts = write_shell_cmds()
         print(f"regenerated {path}  ({len(shorts)} projects)")
-        rows = list_cmd_rows(filter_text=filt)
-        _print_cmd_rows(rows, verbose=verbose)
+        _print_cmd_rows(list_cmd_rows(filter_text=filt), verbose=verbose)
         return 0
-    if sub == "list":
-        rows = list_cmd_rows(filter_text=filt)
-        # filter alone does NOT dump variants unless -v (cleaner list)
-        _print_cmd_rows(rows, verbose=verbose)
-        return 0
-    if sub == "show":
-        rows = list_cmd_rows(filter_text=filt)
-        _print_cmd_rows(rows, verbose=True)
+    if sub in ("list", "show"):
+        _print_cmd_rows(list_cmd_rows(filter_text=filt), verbose=verbose)
         return 0
     print("usage: ccmd shell install|regen|list [--filter NAME] [-v]", file=sys.stderr)
-    print("       ccmds              # list base cmds", file=sys.stderr)
-    print("       ccmds ana          # one project + agent variants", file=sys.stderr)
+    print("       ccmds              # full table with agent logos", file=sys.stderr)
     return 1
 
 
@@ -168,10 +185,8 @@ def _cmd_cmds(args: argparse.Namespace) -> int:
     from ccmd.core.shell_cmds import list_cmd_rows
 
     filt = args.filter or args.name
-    # single-name lookup → show agent variants; bare list → base only
-    verbose = bool(args.verbose) or bool(filt)
     rows = list_cmd_rows(filter_text=filt)
-    _print_cmd_rows(rows, verbose=verbose)
+    _print_cmd_rows(rows, verbose=bool(args.verbose))
     return 0
 
 

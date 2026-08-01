@@ -243,15 +243,15 @@ def render_shell_cmds(projects: list, shorts: dict[str, str]) -> str:
             )
         lines.append("")
 
-    # helper: list base commands (color); pass a name for agent variants
+    # helper: full table — cmd + every agent logo/name/variant
     lines.extend(
         [
-            "# list short commands — base only; pass a name for agent variants",
+            "# list all short commands with agent logos & variants",
             "ccmds() {",
             '  if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then',
-            '    echo "ccmds              list base commands (colored)"',
-            '    echo "ccmds -v           list base + all agent variants"',
-            '    echo "ccmds <name>       one project + agents (e.g. ccmds ana)"',
+            '    echo "ccmds              all projects + agent cmds (logos)"',
+            '    echo "ccmds -v           include full paths"',
+            '    echo "ccmds <name>       filter (e.g. ccmds ana)"',
             '    echo "ccmds -l|--list    same as bare ccmds"',
             "    return 0",
             "  fi",
@@ -263,8 +263,7 @@ def render_shell_cmds(projects: list, shorts: dict[str, str]) -> str:
             '    command ccmd shell list',
             "    return $?",
             "  fi",
-            '  # one project → show agent subcommands',
-            '  command ccmd shell show --filter "$1"',
+            '  command ccmd shell list --filter "$1"',
             "}",
             "",
             "# end ccmd shell cmds",
