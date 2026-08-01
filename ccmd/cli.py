@@ -6,7 +6,7 @@ import argparse
 import json
 import shutil
 import sys
-from pathlib import Path
+from pathlib import Path  # noqa: F401 — used by project browse/add
 
 from ccmd import __version__
 from ccmd.config.paths import ensure_dirs, home
@@ -118,7 +118,21 @@ def _cmd_project(args: argparse.Namespace) -> int:
             print(f"{r['name']:<24} {r['path']}  ({', '.join(r['markers'])})")
         print(f"{len(rows)} project-like dirs" + (" (registered new)" if args.register else ""))
         return 0
-    print("usage: ccmd project add|rm|scan", file=sys.stderr)
+    if args.project_cmd == "browse":
+        from ccmd.tui.app import CcmdApp
+        from ccmd.tui.screens.browser import DirBrowserScreen
+
+        class _BrowseApp(CcmdApp):
+            def on_mount(self) -> None:
+                def _done(ok: bool | None) -> None:
+                    self.exit(0 if ok else 1)
+
+                start = Path(args.path).expanduser() if args.path else None
+                self.push_screen(DirBrowserScreen(start=start), _done)
+
+        _BrowseApp().run()
+        return 0
+    print("usage: ccmd project add|rm|scan|browse", file=sys.stderr)
     return 1
 
 
@@ -214,9 +228,9 @@ def build_parser() -> argparse.ArgumentParser:
     mig.add_argument("--apply", action="store_true")
 
     proj = sub.add_parser("project", help="Manage projects")
-    proj.add_argument("project_cmd", choices=["add", "rm", "scan"])
+    proj.add_argument("project_cmd", choices=["add", "rm", "scan", "browse"])
     proj.add_argument("--name")
-    proj.add_argument("--path")
+    proj.add_argument("--path", help="browse start path, or add path")
     proj.add_argument("--agent")
     proj.add_argument("--register", action="store_true", help="scan: add found projects")
 

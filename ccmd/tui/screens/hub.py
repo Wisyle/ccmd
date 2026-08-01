@@ -22,6 +22,7 @@ class HubScreen(Screen):
         Binding("enter", "open_project", "Open", show=True),
         Binding("a", "pick_agent", "Agents", show=True),
         Binding("n", "new_project", "New", show=True),
+        Binding("b", "browse", "Browse", show=True),
         Binding("s", "sessions", "Sessions", show=True),
         Binding("h", "ssh", "SSH", show=True),
         Binding("l", "aliases", "Aliases", show=True),
@@ -50,7 +51,7 @@ class HubScreen(Screen):
                 yield Static("Select a project", id="detail")
         yield Static("", id="status")
         yield Static(
-            "↵ open · a agents · n new · s sessions · h ssh · l aliases · / filter · q quit",
+            "↵ open · a agents · b browse · n new · s sessions · h ssh · l aliases · / filter · q quit",
             id="footer-bar",
         )
         yield Footer()
@@ -175,6 +176,15 @@ class HubScreen(Screen):
                 self._load_projects(self.query_one("#filter", Input).value)
 
         self.app.push_screen(ProjectEditScreen(), _done)
+
+    def action_browse(self) -> None:
+        from ccmd.tui.screens.browser import DirBrowserScreen
+
+        def _done(ok: bool | None) -> None:
+            if ok:
+                self._load_projects(self.query_one("#filter", Input).value)
+
+        self.app.push_screen(DirBrowserScreen(), _done)
 
     def action_sessions(self) -> None:
         from ccmd.tui.screens.sessions import SessionsScreen

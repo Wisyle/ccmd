@@ -20,7 +20,7 @@ class UIConfig:
 @dataclass
 class Config:
     scan_roots: list[str] = field(
-        default_factory=lambda: ["~/projects", "~/code", "/mnt/vylth"]
+        default_factory=lambda: ["~/projects", "~/code", "~/dev", "/mnt"]
     )
     scan_depth: int = 3
     default_agent: str = "claude"
