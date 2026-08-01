@@ -1,161 +1,97 @@
-# ccmd
+# ccmd 2.0 — Agentic Project Hub
 
-**Stop memorizing commands. Start commanding naturally.**
+Pick a project. Pick an agent. Launch.
 
-[![PyPI](https://img.shields.io/pypi/v/ccmd.svg?label=PyPI&color=black)](https://pypi.org/project/ccmd/)
-[![Downloads](https://img.shields.io/pypi/dm/ccmd.svg?color=black)](https://pypi.org/project/ccmd/)
-[![License](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.7+-black.svg)](https://www.python.org/)
-[![Security](https://img.shields.io/badge/security-audited-black.svg)](security/)
+```
+   ██████╗ ██████╗███╗   ███╗██████╗
+  ██╔════╝██╔════╝████╗ ████║██╔══██╗
+  ██║     ██║     ██╔████╔██║██║  ██║
+  ██║     ██║     ██║╚██╔╝██║██║  ██║
+  ╚██████╗╚██████╗██║ ╚═╝ ██║██████╔╝
+   ╚═════╝ ╚═════╝╚═╝     ╚═╝╚═════╝
+        project hub  ·  v2.0
+```
 
-ccmd is a cross-platform terminal command manager. Define short, intuitive aliases for the commands you type every day — then just type them.
-
-Works on **Linux**, **Windows PowerShell**, and **WSL**.
-
----
+ccmd is a local control plane for coding agents — Claude Code, Grok Build, Codex, Cursor Agent, Goose, Aider, and ChatGPT (browser). It is not another coding agent. It prepares the room and opens the door.
 
 ## Install
 
 ```bash
-pip install ccmd
-ccmd --install   # one-time shell integration + setup wizard
+pip install -e .
+# or: pip install ccmd  (when published)
+ccmd doctor
+ccmd migrate --apply   # import 1.x shortcuts + custom commands
+ccmd                   # vibrant TUI
 ```
 
-On first install you'll be prompted to register your favorite directories — these power the `go` command. Skip it or redo it anytime with `ccmd setup`.
+Python 3.11+.
 
----
+## Daily use
 
-## The idea
+| Command | What |
+|---------|------|
+| `ccmd` | Project hub TUI |
+| `ccmd open flow --agent claude` | Headless launch |
+| `ccmd list` | Projects |
+| `ccmd agents` | Detect installed agents |
+| `ccmd sessions` | Launch history / kill |
+| `ccmd ssh import` | Pull hosts from `~/.ssh/config` |
+| `ccmd aliases import` | Pull aliases from `~/.bashrc` |
+| `ccmd mcp` | Stdio MCP tool server |
+| `ccmd doctor` | Paths + agent diagnostics |
 
-Instead of this:
+### TUI keys
+
+`↵` open · `a` agents · `n` new project · `s` sessions · `h` ssh · `/` filter · `q` quit
+
+## Config
+
+| Path | Role |
+|------|------|
+| `~/.ccmd/config.toml` | Global |
+| `~/.ccmd/projects/*.yaml` | Registry |
+| `~/.ccmd/ssh/hosts.yaml` | SSH profiles |
+| `~/.ccmd/aliases.yaml` | Aliases + PATH |
+| `~/.ccmd/sessions.jsonl` | Sessions |
+
+Override home with `CCMD_HOME`.
+
+## MCP
 
 ```bash
-cd ~/projects/myapp && git add . && git commit -m "update" && git push
+ccmd mcp
 ```
 
-You write this:
+Tools: `projects.list`, `projects.get`, `agents.list`, `agents.launch`, `sessions.list`, `sessions.kill`, `ssh.list`.
 
-```bash
-push
-```
-
-ccmd replaces long, forgettable terminal syntax with commands you define yourself — stored in YAML, backed up automatically, and safe to roll back.
-
----
-
-## What you get out of the box
-
-| Command | What it does |
-|---------|-------------|
-| `go <dir>` | Jump to any directory by name — searches your entire system |
-| `setup` | Register your directory shortcuts and set a master password |
-| `push` | Interactive git add, commit, and push in one command |
-| `cpu` | Live CPU usage |
-| `mem` | Memory usage |
-| `proc` | Running processes |
-| `add` | Create a custom command interactively |
-| `remove` | Remove a custom command |
-| `list` | View and toggle commands on/off |
-| `reload` | Reload config without reinstalling |
-| `restore` | Roll back shell changes |
-
----
-
-## Custom commands
-
-```bash
-ccmd add
-```
-
-You'll be prompted for a name, a shell command, and whether it needs a password. That's it. Your custom commands live in `~/.ccmd/custom_commands.yaml` and survive all future updates.
-
-**Command chaining** — use `>>>` to chain multiple commands under one name:
-
-```bash
-# Define once
-ccmd add
-> name: devstart
-> command: go projects >>> ls >>> echo "ready"
-
-# Then just type:
-devstart
-```
-
-## Directory shortcuts
-
-The `go` command remembers your folders. Register them once:
-
-```bash
-ccmd setup          # interactive wizard
-# or edit ~/.ccmd/shortcuts.yaml directly:
-```
-
-```yaml
-# ~/.ccmd/shortcuts.yaml
-projects: /home/user/code/projects
-work:     /home/user/work
-```
-
-```bash
-go projects         # → cd /home/user/code/projects
-go work             # → cd /home/user/work
-```
-
-Built-in shortcuts (`downloads`, `documents`, `desktop`, `home`) are always available. Your shortcuts take priority if there's a name collision.
-
----
-
-## Real-world example
-
-```bash
-# Instead of this every morning:
-cd ~/work/api && git pull && docker compose up -d && echo "Running"
-
-# Define it once:
-ccmd add
-> name: work
-> command: go api >>> git pull >>> docker compose up -d
-
-# Then just type:
-work
-```
-
----
+NDJSON on stdio (works without the optional `mcp` package).
 
 ## Security
 
-ccmd sits between you and your shell. It was built with that in mind.
+- No shell-function-per-command / `eval cd` (removed from 1.x)
+- Subprocess argv lists only
+- SSH IdentityFile paths only — never private key contents
+- Env file secrets redacted from MCP payloads
+- Atomic config writes mode `0600`
 
-- Atomic shell config writes — no corruption on crash
-- 40+ command injection patterns blocked automatically
-- Optional master password (bcrypt) for sensitive commands
-- Automatic backup before every shell modification
-- Full rollback with `ccmd --restore` at any time
-- Audited with Bandit, Safety, and CodeQL — **0 HIGH severity issues**
-
-Full threat model: [THREAT_MODEL.md](security/THREAT_MODEL.md)
-
----
-
-## Update
+## Migrate from 1.x
 
 ```bash
-pip install --upgrade ccmd
+ccmd migrate          # dry-run
+ccmd migrate --apply  # write projects + aliases, backup to ~/.ccmd/legacy/
 ```
 
-## Uninstall
+Your `go X >>> claude` customs become projects with `default_agent: claude`.
+
+## Dev
 
 ```bash
-ccmd --restore   # removes shell integration
-pip uninstall ccmd
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+pytest -q
+ccmd doctor
 ```
-
----
 
 ## License
 
-MIT — free to use, fork, and modify.
-
----
-
-Built by [De Catalyst](https://decatalyst.com) · [@iamdecatalyst](https://x.com/iamdecatalyst)
+MIT

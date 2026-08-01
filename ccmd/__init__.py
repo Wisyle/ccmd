@@ -1,4 +1,4 @@
-"""CCMD - Cross-platform Command Manager"""
+"""ccmd 2.0 — Agentic Project Hub."""
 
-__version__ = "1.2.0"
-__author__ = "De Catalyst"
+__version__ = "2.0.0"
+__all__ = ["__version__"]

@@ -56,3 +56,9 @@ htmlcov/
 
 # Claude project instructions (private)
 claude-instructions.md
+
+.venv/
+__pycache__/
+*.egg-info/
+dist/
+.pytest_cache/

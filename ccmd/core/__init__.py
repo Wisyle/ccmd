@@ -1,1 +1,1 @@
-"""Core modules for CCMD"""
+"""ccmd core."""

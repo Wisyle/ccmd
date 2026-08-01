@@ -1,0 +1,124 @@
+commands:
+  go:
+    description: Navigate to common directories (with smart search)
+    action:
+      downloads: cd ~/Downloads
+      documents: cd ~/Documents
+      desktop: cd ~/Desktop
+      home: cd ~
+      ccmd: cd $CCMD_HOME
+    type: navigation
+  push:
+    description: Git add, commit, and push
+    action: git add . && git commit -m "{message}" && git push
+    type: git
+    interactive: true
+  cpu:
+    description: Show CPU usage
+    action:
+      linux: top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk
+        '{print 100 - $1"%"}'
+      macos: top -l 1 | grep "CPU usage"
+      windows: powershell "Get-Counter '\Processor(_Total)\% Processor Time' | Select-Object
+        -ExpandProperty CounterSamples | Select-Object CookedValue"
+    type: system
+  mem:
+    description: Show memory usage
+    action:
+      linux: free -h
+      macos: vm_stat
+      windows: powershell "Get-Counter '\Memory\Available MBytes' | Select-Object
+        -ExpandProperty CounterSamples | Select-Object CookedValue"
+    type: system
+  proc:
+    description: Show running processes
+    action:
+      linux: ps aux
+      macos: ps aux
+      windows: tasklist
+    type: system
+  kap:
+    description: Kill ALL processes (with confirmation, password protected)
+    action:
+      linux: killall -9 -u $(whoami)
+      macos: killall -9 -u $(whoami)
+      windows: taskkill /F /FI "USERNAME eq %USERNAME%"
+    type: system
+    require_password: true
+    interactive: true
+  kp:
+    description: Kill process by name
+    action:
+      linux: pkill -9 {process_name}
+      macos: pkill -9 {process_name}
+      windows: taskkill /F /IM {process_name}.exe
+    type: system
+    prompt: Enter process name
+  update:
+    description: Update CCMD to latest version from GitHub
+    action: python $CCMD_HOME/run.py --update
+    type: internal
+  restore:
+    description: Restore shell configuration from backup
+    action: python $CCMD_HOME/run.py --restore
+    type: internal
+  uninstall:
+    description: Uninstall CCMD and remove shell integration
+    action: python $CCMD_HOME/run.py --uninstall
+    type: internal
+  hi:
+    description: Show personalized dashboard with system overview
+    action: python $CCMD_HOME/run.py hi
+    type: internal
+  list:
+    description: List all available CCMD commands
+    action: python $CCMD_HOME/run.py --list
+    type: internal
+    interactive: true
+  version:
+    description: Show current and latest CCMD version
+    action: python $CCMD_HOME/run.py --version
+    type: internal
+  add:
+    description: Add a custom command
+    action: python $CCMD_HOME/run.py add
+    type: internal
+    interactive: true
+  remove:
+    description: Remove a custom command
+    action: python $CCMD_HOME/run.py remove
+    type: internal
+    interactive: true
+  reload:
+    description: Reload CCMD configuration and update shell integration
+    action: python $CCMD_HOME/run.py --reload
+    type: internal
+  init:
+    description: Initialize master password for sensitive commands (v1.1.1)
+    action: python $CCMD_HOME/run.py --init
+    type: internal
+    interactive: true
+  setup:
+    description: Run the setup wizard to register go-shortcuts and set password (v1.2.0)
+    action: python $CCMD_HOME/run.py --setup
+    type: internal
+    interactive: true
+  debug:
+    description: Show debug information and system diagnostics
+    action: python $CCMD_HOME/run.py --debug
+    type: internal
+  sudo:
+    description: 'Run command as superuser (password protected). Usage: sudo <command>'
+    action: sudo {0}
+    type: system
+    require_password: true
+  change-password:
+    description: Change CCMD master password
+    action: python $CCMD_HOME/run.py --change-password
+    type: internal
+    interactive: true
+  reset-password:
+    description: Reset master password (if forgotten)
+    action: python $CCMD_HOME/run.py --reset-password
+    type: internal
+    interactive: true
