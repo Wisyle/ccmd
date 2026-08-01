@@ -20,53 +20,82 @@ from ccmd.core.sessions import SessionStore
 from ccmd.core.ssh import SSHStore
 
 
+def _print_cmd_rows(rows: list, *, verbose: bool = False) -> None:
+    if not rows:
+        print("no matching commands")
+        return
+    for r in rows:
+        v = r["variants"]
+        print(
+            f"{r['short']:<10} {r['project']:<20} "
+            f"default={r['default_agent']:<8}  "
+            f"{v.get('claude',''):<10} {v.get('grok',''):<10} "
+            f"{v.get('codex',''):<10} {v.get('cursor',''):<10}"
+        )
+        if verbose or len(rows) == 1:
+            print(f"{'':10} path  {r['path']}")
+            print(
+                f"{'':10} all   "
+                + "  ".join(f"{aid}={fn}" for aid, fn in v.items())
+            )
+    print(f"\n{len(rows)} project(s)  ·  helper: ccmds   ·  file: use ccmd shell list")
+
+
 def _cmd_shell(args: argparse.Namespace) -> int:
     from ccmd.core.shell_cmds import (
+        format_cmds_block,
         install_shell_hook,
         list_cmd_rows,
         shell_cmds_path,
         write_shell_cmds,
     )
 
-    sub = args.shell_cmd or "regen"
+    sub = args.shell_cmd or "list"
+    filt = getattr(args, "filter", None)
+    verbose = bool(getattr(args, "verbose", False))
+
     if sub == "install":
-        path = write_shell_cmds()
+        path, shorts = write_shell_cmds()
         rcs = install_shell_hook()
         print(f"wrote {path}")
         for rc in rcs:
             print(f"hooked {rc}")
         print("restart shell or:  source ~/.ccmd/shell_cmds.sh")
-        print("then:  ana / anac / anag  …")
+        print("then:  ccmds          # list all")
+        print("       ana / anac / anag  …")
+        if verbose:
+            _print_cmd_rows(list_cmd_rows(), verbose=False)
         return 0
     if sub == "regen":
-        path = write_shell_cmds()
-        print(f"regenerated {path}")
-        rows = list_cmd_rows()
-        for r in rows[:30]:
-            print(
-                f"  {r['short']:<10} {r['project']:<18} "
-                f"default={r['default_agent']:<8}  "
-                f"{r['short']}c/g/x/u/o/a/p"
-            )
-        if len(rows) > 30:
-            print(f"  … +{len(rows) - 30} more  (see {path})")
+        path, shorts = write_shell_cmds()
+        print(f"regenerated {path}  ({len(shorts)} projects)")
+        rows = list_cmd_rows(filter_text=filt)
+        _print_cmd_rows(rows, verbose=verbose)
         return 0
     if sub == "list":
-        for r in list_cmd_rows():
-            vars_ = " ".join(
-                f"{k[0]}={v}" for k, v in r["variants"].items()
-            )
-            # show compact
-            v = r["variants"]
-            print(
-                f"{r['short']:<10} {r['project']:<20} "
-                f"{v.get('claude','')} {v.get('grok','')} {v.get('codex','')} "
-                f"{v.get('cursor','')}  → {r['path']}"
-            )
-        print(f"\nfile: {shell_cmds_path()}")
+        rows = list_cmd_rows(filter_text=filt)
+        _print_cmd_rows(rows, verbose=verbose or bool(filt))
+        print(f"file: {shell_cmds_path()}")
         return 0
-    print("usage: ccmd shell install|regen|list", file=sys.stderr)
+    if sub == "show" and filt:
+        rows = list_cmd_rows(filter_text=filt)
+        _print_cmd_rows(rows, verbose=True)
+        return 0
+    print("usage: ccmd shell install|regen|list [--filter NAME] [-v]", file=sys.stderr)
+    print("       ccmds              # shell helper (after: source ~/.ccmd/shell_cmds.sh)", file=sys.stderr)
     return 1
+
+
+def _cmd_cmds(args: argparse.Namespace) -> int:
+    """Top-level: ccmd cmds [--list] [filter]  — same as shell list."""
+    from ccmd.core.shell_cmds import list_cmd_rows, shell_cmds_path
+
+    filt = args.filter or args.name
+    rows = list_cmd_rows(filter_text=filt)
+    _print_cmd_rows(rows, verbose=bool(filt) or args.verbose)
+    print(f"file: {shell_cmds_path()}")
+    print("tip:  ccmds   (shell function) after source ~/.ccmd/shell_cmds.sh")
+    return 0
 
 
 def _cmd_open(args: argparse.Namespace) -> int:
@@ -301,9 +330,35 @@ def build_parser() -> argparse.ArgumentParser:
     sh.add_argument(
         "shell_cmd",
         nargs="?",
-        choices=["install", "regen", "list"],
-        default="regen",
-        help="install=write cmds + hook bashrc; regen=rewrite cmds; list=show",
+        choices=["install", "regen", "list", "show"],
+        default="list",
+        help="install|regen|list|show",
+    )
+    sh.add_argument(
+        "--filter",
+        "-f",
+        dest="filter",
+        help="filter by short/project/path (e.g. ana)",
+    )
+    sh.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="show full agent variant map",
+    )
+
+    cmds = sub.add_parser(
+        "cmds",
+        help="List short shell commands (same as: ccmd shell list / ccmds)",
+    )
+    cmds.add_argument("name", nargs="?", help="filter (e.g. ana or flow)")
+    cmds.add_argument("--filter", "-f", dest="filter", help="filter text")
+    cmds.add_argument("-v", "--verbose", action="store_true")
+    cmds.add_argument(
+        "--list",
+        "-l",
+        action="store_true",
+        help="list all (default)",
     )
 
     return p
@@ -336,6 +391,7 @@ def main(argv: list[str] | None = None) -> int:
         "doctor": _cmd_doctor,
         "mcp": _cmd_mcp,
         "shell": _cmd_shell,
+        "cmds": _cmd_cmds,
     }
     handler = handlers.get(args.cmd)
     if not handler:

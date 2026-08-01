@@ -44,15 +44,30 @@ def test_write_persists_short(ccmd_home: Path, tmp_path: Path) -> None:
     proj.mkdir()
     reg = ProjectRegistry()
     p = reg.add(name="myapp", path=proj, default_agent="grok")
-    path = write_shell_cmds()
+    path, shorts = write_shell_cmds()
     assert path.exists()
     body = path.read_text(encoding="utf-8")
     assert "ccmd open" in body
+    assert "ccmds()" in body
     p2 = reg.get(p.id)
     assert p2 is not None
     assert p2.short
     # agent suffix functions exist for short
     assert f"{p2.short}c() {{" in body or f"{p2.short}g() {{" in body
+    assert p2.id in shorts
+
+
+def test_cmds_notice(ccmd_home: Path, tmp_path: Path) -> None:
+    from ccmd.core.shell_cmds import cmds_notice
+
+    proj = tmp_path / "anastasis"
+    proj.mkdir()
+    p = ProjectRegistry().add(name="anastasis", path=proj)
+    p = ProjectRegistry().get(p.id) or p
+    msg = cmds_notice(p)
+    assert "cmds:" in msg
+    assert "ccmds" in msg
+    assert p.short in msg
 
 
 def test_agent_suffix_map_complete() -> None:

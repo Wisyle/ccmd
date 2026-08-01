@@ -51,6 +51,7 @@ class HubScreen(Screen):
         Binding("slash", "focus_filter", "Filter", show=False),
         Binding("/", "focus_filter", "Filter", show=True),
         Binding("escape", "blur_filter", "Esc", show=False),
+        Binding("c", "show_cmds", "Cmds", show=True),
         Binding("1", "agent_n_1", show=False),
         Binding("2", "agent_n_2", show=False),
         Binding("3", "agent_n_3", show=False),
@@ -211,10 +212,33 @@ class HubScreen(Screen):
             "agents  ]/[ cycle · 1-7 set · A set · a launch",
             *roster,
             "",
-            "enter open · d detach · b/f add from disk",
-            "shell: source ~/.ccmd/shell_cmds.sh  (or: ccmd shell install)",
+            "enter open · d detach · b/f add from disk · c show cmds",
+            "shell: ccmds  |  ccmd shell list  |  source ~/.ccmd/shell_cmds.sh",
         ]
         detail.update("\n".join(lines))
+
+    def action_show_cmds(self) -> None:
+        """Flag-style view: toast the shell shortcuts for the selected project."""
+        from ccmd.core.shell_cmds import cmds_notice, format_cmds_block
+
+        p = self._selected()
+        if not p:
+            self.notify(
+                "all cmds: run  ccmds  or  ccmd shell list",
+                severity="information",
+                timeout=6,
+            )
+            return
+        p = self.registry.get(p.id) or p
+        # multi-line block in status + toast summary
+        block = format_cmds_block(p)
+        self.query_one("#status", Static).update(block.replace("\n", " · "))
+        self.notify(cmds_notice(p), severity="information", timeout=10)
+        self.notify(
+            f"{p.short or p.id}: c={p.short}c g={p.short}g x={p.short}x u={p.short}u",
+            severity="information",
+            timeout=8,
+        )
 
     def _set_default_agent(self, agent_id: str, *, notify: bool = True) -> None:
         p = self._selected()
@@ -226,8 +250,16 @@ class HubScreen(Screen):
             return
         p.default_agent = agent_id
         self.registry.save(p)
+        p = self.registry.get(p.id) or p
         if notify:
-            self.notify(f"{p.id} → default agent {agent_id}", severity="information")
+            from ccmd.core.shell_cmds import cmds_notice
+
+            self.notify(
+                f"{p.id} → default agent {agent_id}",
+                severity="information",
+                timeout=3,
+            )
+            self.notify(cmds_notice(p), severity="information", timeout=8)
         self._load_projects(self.query_one("#filter", Input).value)
 
     def _cycle_agent(self, delta: int) -> None:

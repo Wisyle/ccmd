@@ -45,8 +45,12 @@ class ProjectEditScreen(Screen[bool | None]):
         if not p.is_dir():
             self.notify(f"not a directory: {p}", severity="error")
             return
-        ProjectRegistry().add(name=name, path=p, default_agent=agent)
-        self.notify(f"added {name}", severity="information")
+        from ccmd.core.shell_cmds import cmds_notice
+
+        proj = ProjectRegistry().add(name=name, path=p, default_agent=agent)
+        proj = ProjectRegistry().get(proj.id) or proj
+        self.notify(f"added {name}", severity="information", timeout=3)
+        self.notify(cmds_notice(proj), severity="information", timeout=10)
         self.dismiss(True)
 
     def action_cancel(self) -> None:

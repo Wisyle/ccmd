@@ -243,13 +243,66 @@ def render_shell_cmds(projects: list, shorts: dict[str, str]) -> str:
             )
         lines.append("")
 
-    lines.append("# end ccmd shell cmds")
-    lines.append("")
+    # helper: list all short commands from the shell
+    lines.extend(
+        [
+            "# list every project short command",
+            "ccmds() {",
+            '  if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then',
+            '    echo "ccmds              list all short commands"',
+            '    echo "ccmds <name>       show one project (e.g. ccmds ana)"',
+            '    echo "ccmds -l|--list    same as bare ccmds"',
+            '    echo "ccmd shell list    full CLI list"',
+            "    return 0",
+            "  fi",
+            '  if [ -z "$1" ] || [ "$1" = "-l" ] || [ "$1" = "--list" ]; then',
+            '    command ccmd shell list',
+            "    return $?",
+            "  fi",
+            '  command ccmd shell list --filter "$1"',
+            "}",
+            "",
+            "# end ccmd shell cmds",
+            "",
+        ]
+    )
     return "\n".join(lines)
 
 
-def write_shell_cmds(projects: list | None = None) -> Path:
-    """Write ~/.ccmd/shell_cmds.sh and persist short names on projects."""
+def cmds_notice(project, short: str | None = None) -> str:
+    """Human-readable one-liner of shortcuts for a project (for TUI/CLI notices)."""
+    s = short or getattr(project, "short", None) or ""
+    if not s:
+        shorts = allocate_shorts([project])
+        s = shorts.get(project.id, project.id[:4])
+    variants = " ".join(
+        f"{s}{suf}={aid}" for aid, suf in AGENT_SUFFIX.items()
+    )
+    return (
+        f"cmds: {s} (default={project.default_agent})  "
+        f"{s}c=claude {s}g=grok {s}x=codex {s}u=cursor  "
+        f"| ccmds  or  ccmd shell list"
+    )
+
+
+def format_cmds_block(project, short: str | None = None) -> str:
+    """Multi-line block shown after save."""
+    s = short or getattr(project, "short", None) or project.id[:4]
+    lines = [
+        f"shell commands for {project.id}:",
+        f"  {s:<10} open with default agent ({project.default_agent})",
+    ]
+    for aid, suf in AGENT_SUFFIX.items():
+        lines.append(f"  {s}{suf:<9} --agent {aid}")
+    lines.append("list all:  ccmds   or   ccmd shell list")
+    return "\n".join(lines)
+
+
+def write_shell_cmds(projects: list | None = None) -> tuple[Path, dict[str, str]]:
+    """Write ~/.ccmd/shell_cmds.sh and persist short names on projects.
+
+    Returns (path, {project_id: short}).
+    """
     from ccmd.core.projects import ProjectRegistry
 
     reg = ProjectRegistry()
@@ -278,7 +331,7 @@ def write_shell_cmds(projects: list | None = None) -> Path:
         )
         lines.append(f"{'':10} {p.path}\n")
     sheet.write_text("".join(lines), encoding="utf-8")
-    return path
+    return path, shorts
 
 
 def install_shell_hook(rc_file: Path | None = None) -> list[Path]:
@@ -288,6 +341,7 @@ def install_shell_hook(rc_file: Path | None = None) -> list[Path]:
     block = (
         f"\n{MARKER_BEGIN}\n"
         f"# managed by ccmd — short project commands (ana/anac/anag…)\n"
+        f"# list them anytime: ccmds   or   ccmds ana\n"
         f'[ -f "$HOME/.ccmd/shell_cmds.sh" ] && . "$HOME/.ccmd/shell_cmds.sh"\n'
         f"{MARKER_END}\n"
     )
@@ -331,22 +385,38 @@ def install_shell_hook(rc_file: Path | None = None) -> list[Path]:
     return updated
 
 
-def list_cmd_rows(projects: list | None = None) -> list[dict]:
+def list_cmd_rows(
+    projects: list | None = None,
+    *,
+    filter_text: str | None = None,
+) -> list[dict]:
     from ccmd.core.projects import ProjectRegistry
 
     projects = list(projects) if projects is not None else ProjectRegistry().list()
     shorts = allocate_shorts(projects)
     rows = []
     for p in projects:
-        s = shorts.get(p.id, "")
+        s = shorts.get(p.id, "") or getattr(p, "short", "") or ""
         rows.append(
             {
                 "short": s,
                 "project": p.id,
+                "name": p.name,
                 "default_agent": p.default_agent,
                 "path": p.path,
                 "variants": {a: f"{s}{suf}" for a, suf in AGENT_SUFFIX.items()},
             }
         )
     rows.sort(key=lambda r: r["short"])
+    if filter_text:
+        q = filter_text.strip().lower()
+        rows = [
+            r
+            for r in rows
+            if q in r["short"].lower()
+            or q in r["project"].lower()
+            or q in r["name"].lower()
+            or q in r["path"].lower()
+            or any(q in v.lower() for v in r["variants"].values())
+        ]
     return rows

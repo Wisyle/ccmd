@@ -323,14 +323,24 @@ class DirBrowserScreen(Screen[bool | None]):
             self.notify(str(e), severity="error")
             return
 
+        from ccmd.core.shell_cmds import cmds_notice
+
         reg = ProjectRegistry()
         existing = reg.find_by_path(resolved)
         if existing:
             existing.default_agent = self._agent
             reg.save(existing)
+            # reload short after regen
+            existing = reg.get(existing.id) or existing
             self.notify(
-                f"already had {existing.id} — default agent → {self._agent}",
+                f"updated {existing.id} · agent {self._agent}",
                 severity="information",
+                timeout=4,
+            )
+            self.notify(
+                cmds_notice(existing),
+                severity="information",
+                timeout=8,
             )
             self.dismiss(True)
             return
@@ -342,9 +352,16 @@ class DirBrowserScreen(Screen[bool | None]):
             default_agent=self._agent,
             notes="added via browser",
         )
+        p = reg.get(p.id) or p
         self.notify(
             f"added {p.id} · agent {self._agent} → {resolved}",
             severity="information",
+            timeout=4,
+        )
+        self.notify(
+            cmds_notice(p),
+            severity="information",
+            timeout=10,
         )
         self.dismiss(True)
 
