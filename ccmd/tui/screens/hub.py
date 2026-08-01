@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from rich.markup import escape
 from textual import on, work
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -24,12 +23,11 @@ AGENT_ORDER = [a.id for a in all_agents()]
 
 
 def _agent_bar() -> str:
+    """Plain text — no Rich tags (logos/paths break markup easily)."""
     parts: list[str] = []
     for i, a in enumerate(detect_agents(), start=1):
-        if a["installed"]:
-            parts.append(f"[{a['color']}]{i}:{a['logo']}{a['id']}[/]")
-        else:
-            parts.append(f"[#6a6a80]{i}:{a['id']}[/]")
+        flag = "+" if a["installed"] else "-"
+        parts.append(f"{i}:{a['logo']}{a['id']}{flag}")
     return "  ".join(parts)
 
 
@@ -87,11 +85,13 @@ class HubScreen(Screen):
                 yield OptionList(id="project-list")
             with Vertical(id="detail-panel"):
                 yield Static("detail", classes="panel-title")
-                yield Static("Select a project", id="detail")
-        yield Static("", id="status")
+                # markup=False: paths, timestamps, and key hints must never hit Rich
+                yield Static("Select a project", id="detail", markup=False)
+        yield Static("", id="status", markup=False)
         yield Static(
-            "↵ open · f /mnt · b browse · / filter · esc list · a agent · ] cycle · q quit",
+            "enter open · f /mnt · b browse · / filter · esc list · a agent · ] cycle · q quit",
             id="footer-bar",
+            markup=False,
         )
         yield Footer()
 
@@ -174,10 +174,10 @@ class HubScreen(Screen):
         if not p:
             detail.update(
                 "Select a project\n\n"
-                "[#6a6a80]This list is your saved registry.\n"
-                "Press [bold]f[/] to browse /mnt and subdirs,\n"
-                "or [bold]b[/] for home + all roots.\n"
-                "Press ] to cycle default agent.[/]"
+                "This list is your saved registry.\n"
+                "Press f to browse /mnt and subdirs,\n"
+                "or b for home + all roots.\n"
+                "Press ] to cycle default agent."
             )
             return
         agent = get_agent(p.default_agent)
@@ -189,30 +189,26 @@ class HubScreen(Screen):
         exists = "yes" if p.exists() else "MISSING"
         roster: list[str] = []
         for i, a in enumerate(self._agent_info, start=1):
-            mark = "●" if a["id"] == p.default_agent else "·"
-            ready = "✓" if a["installed"] else "✗"
-            roster.append(
-                f"  {mark} {i} {escape(str(a['logo']))} "
-                f"{escape(a['id']):<8} {ready}"
-            )
+            mark = "*" if a["id"] == p.default_agent else " "
+            ready = "ok" if a["installed"] else "no"
+            roster.append(f"  {mark} {i} {a['logo']} {a['id']:<8} {ready}")
 
-        # Escape anything that can contain [ ] so Rich markup doesn't explode
         lines = [
-            f"[bold #00ffc8]{escape(p.name)}[/]",
-            f"id      {escape(p.id)}",
-            f"path    {escape(p.path)}",
-            f"root    {escape(_root_label(p.path))}",
+            p.name,
+            f"id      {p.id}",
+            f"path    {p.path}",
+            f"root    {_root_label(p.path)}",
             f"exists  {exists}",
-            f"agent   [bold]{escape(agent_line)}[/]  (default)",
-            f"ssh     {escape(p.ssh_host or '—')}",
-            f"env     {escape(', '.join(p.env_files) or '—')}",
-            f"tags    {escape(', '.join(p.tags) or '—')}",
-            f"opened  {escape(p.last_opened_at or 'never')}",
+            f"agent   {agent_line}  (default)",
+            f"ssh     {p.ssh_host or '-'}",
+            f"env     {', '.join(p.env_files) or '-'}",
+            f"tags    {', '.join(p.tags) or '-'}",
+            f"opened  {p.last_opened_at or 'never'}",
             "",
-            "[bold #c84bff]agents[/]  keys: ] [ cycle · 1-7 set · A set · a launch",
+            "agents  ]/[ cycle · 1-7 set · A set · a launch",
             *roster,
             "",
-            "[#6a6a80]enter open · d detach · b/f add from disk[/]",
+            "enter open · d detach · b/f add from disk",
         ]
         detail.update("\n".join(lines))
 

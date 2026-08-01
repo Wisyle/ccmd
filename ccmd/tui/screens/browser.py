@@ -12,8 +12,6 @@ from textual.screen import Screen
 from textual.widgets import Footer, Input, OptionList, Static
 from textual.widgets.option_list import Option
 
-from rich.markup import escape
-
 from ccmd.config.schema import load_config
 from ccmd.core.agents import all_agents, get_agent
 from ccmd.core.fs import default_browse_roots, is_projectish, list_dir_entries
@@ -71,8 +69,8 @@ class DirBrowserScreen(Screen[bool | None]):
         self._agent = load_config().default_agent or "claude"
 
     def compose(self) -> ComposeResult:
-        yield Static("directory browser", id="subtitle")
-        yield Static("", id="path-bar")
+        yield Static("directory browser", id="subtitle", markup=False)
+        yield Static("", id="path-bar", markup=False)
         yield Input(placeholder="filter this folder…", id="filter")
         with Horizontal(id="main"):
             with Vertical(id="projects-panel"):
@@ -80,10 +78,11 @@ class DirBrowserScreen(Screen[bool | None]):
                 yield OptionList(id="dir-list")
             with Vertical(id="detail-panel"):
                 yield Static("preview", classes="panel-title")
-                yield Static("", id="preview")
+                yield Static("", id="preview", markup=False)
         yield Static(
-            "↵ open · ⌫ up · s add project · ]/[ agent · 1-7 agent · r roots · g path · esc",
+            "enter open · backspace up · s add · ]/[ agent · 1-7 agent · r roots · g path · esc",
             id="footer-bar",
+            markup=False,
         )
         yield Footer()
 
@@ -100,9 +99,8 @@ class DirBrowserScreen(Screen[bool | None]):
         ag = get_agent(self._agent)
         ag_s = f"{ag.ascii_logo} {self._agent}" if ag else self._agent
         bar.update(
-            f"[bold #00ffc8]{escape(str(self._cwd))}[/]{mark}{hidden}  ·  "
-            f"agent [bold #c84bff]{escape(ag_s)}[/]"
-            + (f"  [#6a6a80]{escape(extra)}[/]" if extra else "")
+            f"{self._cwd}{mark}{hidden}  ·  agent {ag_s}"
+            + (f"  {extra}" if extra else "")
         )
 
     def _render_list(self) -> None:
@@ -144,7 +142,7 @@ class DirBrowserScreen(Screen[bool | None]):
     def _render_roots(self) -> None:
         self._mode = "roots"
         self.query_one("#path-bar", Static).update(
-            "[bold #c84bff]browse roots[/]  ·  pick a starting point"
+            "browse roots  ·  pick a starting point"
         )
         self.query_one("#list-title", Static).update("roots")
         ol = self.query_one("#dir-list", OptionList)
@@ -186,21 +184,21 @@ class DirBrowserScreen(Screen[bool | None]):
         kids = list_dir_entries(resolved, show_hidden=self._show_hidden, dirs_only=True)
         project = is_projectish(resolved)
         lines = [
-            f"[bold #00ffc8]{escape(str(resolved.name or resolved))}[/]",
-            f"path     {escape(str(resolved))}",
-            f"project  {'yes ◆' if project else 'no (still selectable)'}",
+            str(resolved.name or resolved),
+            f"path     {resolved}",
+            f"project  {'yes' if project else 'no (still selectable)'}",
             f"subdirs  {len(kids)}",
             "",
-            "[#6a6a80]children[/]",
+            "children",
         ]
         for name, _, _ in kids[:12]:
-            lines.append(f"  · {escape(name)}/")
+            lines.append(f"  - {name}/")
         if len(kids) > 12:
-            lines.append(f"  … +{len(kids) - 12} more")
+            lines.append(f"  ... +{len(kids) - 12} more")
         lines.extend(
             [
                 "",
-                "[#6a6a80]enter open folder · s select as project[/]",
+                "enter open folder · s select as project",
             ]
         )
         prev.update("\n".join(lines))
