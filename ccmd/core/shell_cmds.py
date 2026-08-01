@@ -128,26 +128,31 @@ def shell_cmds_path() -> Path:
 
 
 def short_candidates(project_id: str, name: str) -> list[str]:
-    """Generate preferred short-name candidates for a project."""
+    """Generate preferred short-name candidates for a project.
+
+    Prefer snappy 3–4 letter names (ana, flo) before the full slug.
+    """
     raw = re.sub(r"[^a-z0-9]+", "", (project_id or name).lower())
     if not raw:
         raw = "proj"
     cands: list[str] = []
-    # full slug if short enough
-    if 2 <= len(raw) <= 12:
-        cands.append(raw)
-    # progressive prefixes: ana, anas, anast…
-    for n in range(3, min(8, len(raw) + 1)):
-        cands.append(raw[:n])
+    # progressive prefixes first: ana, anas, anast… (user wants ana not anastasis)
+    for n in (3, 4, 5, 6, 7, 8):
+        if n <= len(raw):
+            cands.append(raw[:n])
+    # first letters of hyphen/underscore parts (build-your-own → byo)
+    parts = re.split(r"[-_\s]+", project_id or name)
+    initials = "".join(p[0] for p in parts if p)[:6].lower()
+    initials = re.sub(r"[^a-z0-9]", "", initials)
+    if len(initials) >= 2:
+        cands.append(initials)
     # consonants-only compact form
     cons = re.sub(r"[aeiou]", "", raw)
     if len(cons) >= 3:
         cands.append(cons[:4])
-    # first letters of hyphen/underscore parts
-    parts = re.split(r"[-_\s]+", project_id or name)
-    initials = "".join(p[0] for p in parts if p)[:6].lower()
-    if len(initials) >= 2:
-        cands.append(re.sub(r"[^a-z0-9]", "", initials))
+    # full slug last (only if reasonably short)
+    if 2 <= len(raw) <= 10:
+        cands.append(raw)
     # dedupe preserve order
     seen: set[str] = set()
     out: list[str] = []
