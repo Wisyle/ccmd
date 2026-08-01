@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ccmd"
-version = "2.0.8"
+version = "2.0.9"
 description = "ccmd — Agentic Project Hub. Pick a project, pick an agent, launch."
 readme = "README.md"
 requires-python = ">=3.11"

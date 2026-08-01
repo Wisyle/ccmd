@@ -20,30 +20,105 @@ from ccmd.core.sessions import SessionStore
 from ccmd.core.ssh import SSHStore
 
 
+# agent accent colors for -v lines
+_AGENT_COLORS = {
+    "claude": "dark_orange3",
+    "grok": "bright_white",
+    "codex": "green",
+    "cursor": "medium_purple",
+    "goose": "yellow",
+    "aider": "cyan",
+    "chatgpt": "sea_green3",
+}
+
+
 def _print_cmd_rows(rows: list, *, verbose: bool = False) -> None:
+    """Pretty list: base command only. Agent variants only with -v or single match."""
+    try:
+        from rich.console import Console
+        from rich.table import Table
+        from rich.text import Text
+
+        console = Console(highlight=False)
+        use_rich = console.is_terminal
+    except Exception:
+        use_rich = False
+
     if not rows:
-        print("no matching commands")
+        if use_rich:
+            Console().print("[dim]no matching commands[/]")
+        else:
+            print("no matching commands")
         return
-    for r in rows:
-        v = r["variants"]
-        print(
-            f"{r['short']:<10} {r['project']:<20} "
-            f"default={r['default_agent']:<8}  "
-            f"{v.get('claude',''):<10} {v.get('grok',''):<10} "
-            f"{v.get('codex',''):<10} {v.get('cursor',''):<10}"
+
+    show_variants = verbose or len(rows) == 1
+
+    if use_rich:
+        console = Console(highlight=False)
+        table = Table(
+            show_header=True,
+            header_style="bold cyan",
+            border_style="bright_black",
+            box=None,
+            pad_edge=False,
+            expand=False,
         )
-        if verbose or len(rows) == 1:
-            print(f"{'':10} path  {r['path']}")
-            print(
-                f"{'':10} all   "
-                + "  ".join(f"{aid}={fn}" for aid, fn in v.items())
+        table.add_column("cmd", style="bold bright_cyan", no_wrap=True)
+        table.add_column("project", style="white")
+        table.add_column("agent", style="magenta")
+        table.add_column("path", style="dim", overflow="ellipsis", max_width=48)
+
+        for r in rows:
+            table.add_row(
+                r["short"],
+                r["project"],
+                r["default_agent"],
+                r["path"],
             )
-    print(f"\n{len(rows)} project(s)  ·  helper: ccmds   ·  file: use ccmd shell list")
+        console.print(table)
+
+        if show_variants:
+            console.print()
+            for r in rows:
+                s = r["short"]
+                console.print(
+                    f"  [bold bright_cyan]{s}[/]  "
+                    f"[dim]→[/]  [white]{r['project']}[/]  "
+                    f"[dim]({r['default_agent']})[/]"
+                )
+                parts = []
+                for aid, fn in r["variants"].items():
+                    color = _AGENT_COLORS.get(aid, "white")
+                    parts.append(f"[{color}]{fn}[/{color}]")
+                console.print("    " + "  ".join(parts))
+                console.print(f"    [dim]{r['path']}[/]")
+
+        console.print()
+        console.print(
+            f"[dim]{len(rows)} command(s)[/]  "
+            f"[dim]·[/]  [bright_cyan]ccmds <name>[/][dim] for agent variants[/]  "
+            f"[dim]·[/]  [bright_cyan]ccmds -v[/][dim] show all variants[/]"
+        )
+        return
+
+    # plain fallback
+    print(f"{'CMD':<10} {'PROJECT':<22} {'AGENT':<10} PATH")
+    print("-" * 72)
+    for r in rows:
+        print(
+            f"{r['short']:<10} {r['project']:<22} "
+            f"{r['default_agent']:<10} {r['path']}"
+        )
+        if show_variants:
+            print(
+                "           agents: "
+                + "  ".join(f"{fn}" for fn in r["variants"].values())
+            )
+    print(f"\n{len(rows)} command(s)  ·  ccmds <name> for agent variants  ·  ccmds -v")
 
 
 def _cmd_shell(args: argparse.Namespace) -> int:
     from ccmd.core.shell_cmds import (
-        format_cmds_block,
         install_shell_hook,
         list_cmd_rows,
         shell_cmds_path,
@@ -61,7 +136,8 @@ def _cmd_shell(args: argparse.Namespace) -> int:
         for rc in rcs:
             print(f"hooked {rc}")
         print("restart shell or:  source ~/.ccmd/shell_cmds.sh")
-        print("then:  ccmds          # list all")
+        print("then:  ccmds          # list base commands (color)")
+        print("       ccmds ana      # agent variants for one project")
         print("       ana / anac / anag  …")
         if verbose:
             _print_cmd_rows(list_cmd_rows(), verbose=False)
@@ -74,27 +150,28 @@ def _cmd_shell(args: argparse.Namespace) -> int:
         return 0
     if sub == "list":
         rows = list_cmd_rows(filter_text=filt)
-        _print_cmd_rows(rows, verbose=verbose or bool(filt))
-        print(f"file: {shell_cmds_path()}")
+        # filter alone does NOT dump variants unless -v (cleaner list)
+        _print_cmd_rows(rows, verbose=verbose)
         return 0
-    if sub == "show" and filt:
+    if sub == "show":
         rows = list_cmd_rows(filter_text=filt)
         _print_cmd_rows(rows, verbose=True)
         return 0
     print("usage: ccmd shell install|regen|list [--filter NAME] [-v]", file=sys.stderr)
-    print("       ccmds              # shell helper (after: source ~/.ccmd/shell_cmds.sh)", file=sys.stderr)
+    print("       ccmds              # list base cmds", file=sys.stderr)
+    print("       ccmds ana          # one project + agent variants", file=sys.stderr)
     return 1
 
 
 def _cmd_cmds(args: argparse.Namespace) -> int:
-    """Top-level: ccmd cmds [--list] [filter]  — same as shell list."""
-    from ccmd.core.shell_cmds import list_cmd_rows, shell_cmds_path
+    """Top-level: ccmd cmds [name] [-v] — same as ccmds."""
+    from ccmd.core.shell_cmds import list_cmd_rows
 
     filt = args.filter or args.name
+    # single-name lookup → show agent variants; bare list → base only
+    verbose = bool(args.verbose) or bool(filt)
     rows = list_cmd_rows(filter_text=filt)
-    _print_cmd_rows(rows, verbose=bool(filt) or args.verbose)
-    print(f"file: {shell_cmds_path()}")
-    print("tip:  ccmds   (shell function) after source ~/.ccmd/shell_cmds.sh")
+    _print_cmd_rows(rows, verbose=verbose)
     return 0
 
 
