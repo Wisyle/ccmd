@@ -33,6 +33,7 @@ def _agent_bar() -> str:
 
 
 class HubScreen(Screen):
+    # Filter Input is can_focus=False until / is pressed, so f/b/a never type into it.
     BINDINGS = [
         Binding("enter", "open_project", "Open", show=True),
         Binding("a", "pick_agent", "Agents", show=True),
@@ -44,13 +45,13 @@ class HubScreen(Screen):
         Binding("h", "ssh", "SSH", show=True),
         Binding("l", "aliases", "Aliases", show=True),
         Binding("d", "detach", "Detach", show=True),
+        Binding("r", "refresh", "Refresh", show=True),
+        Binding("q", "quit", "Quit", show=True),
         Binding("left_square_bracket", "agent_prev", "Agent−", show=True),
         Binding("right_square_bracket", "agent_next", "Agent+", show=True),
         Binding("slash", "focus_filter", "Filter", show=False),
         Binding("/", "focus_filter", "Filter", show=True),
-        Binding("r", "refresh", "Refresh", show=True),
-        Binding("q", "quit", "Quit", show=True),
-        # 1–7 set default agent
+        Binding("escape", "blur_filter", "Esc", show=False),
         Binding("1", "agent_n_1", show=False),
         Binding("2", "agent_n_2", show=False),
         Binding("3", "agent_n_3", show=False),
@@ -74,7 +75,11 @@ class HubScreen(Screen):
             id="subtitle",
         )
         yield Static(_agent_bar(), id="agent-bar")
-        yield Input(placeholder="filter projects…  (/ to focus)", id="filter")
+        # can_focus stays False until / — prevents f/b/a landing in the box
+        yield Input(
+            placeholder="press / to filter projects…",
+            id="filter",
+        )
         with Horizontal(id="main"):
             with Vertical(id="projects-panel"):
                 yield Static("projects (registry — not whole disk)", classes="panel-title")
@@ -84,13 +89,14 @@ class HubScreen(Screen):
                 yield Static("Select a project", id="detail")
         yield Static("", id="status")
         yield Static(
-            "↵ open · a launch w/ agent · A set default · ]/[ cycle · 1-7 agent · "
-            "b browse · f /mnt · d detach · q quit",
+            "↵ open · f /mnt · b browse · / filter · esc list · a agent · ] cycle · q quit",
             id="footer-bar",
         )
         yield Footer()
 
     def on_mount(self) -> None:
+        filt = self.query_one("#filter", Input)
+        filt.can_focus = False
         self._load_projects()
         self.query_one("#project-list", OptionList).focus()
         if not self._projects:
@@ -101,10 +107,9 @@ class HubScreen(Screen):
             )
             self.set_timer(0.3, self.action_browse)
         else:
-            # hint once if everything is claude
             if all(p.default_agent == "claude" for p in self._projects[:20]):
                 self.notify(
-                    "tip: ] cycles default agent · 1–7 picks agent · f browses /mnt",
+                    "tip: f = browse /mnt · / = filter · ] = cycle agent",
                     severity="information",
                     timeout=5,
                 )
@@ -255,7 +260,23 @@ class HubScreen(Screen):
     # ── actions ──────────────────────────────────────────────
 
     def action_focus_filter(self) -> None:
-        self.query_one("#filter", Input).focus()
+        """Only way into the filter — so f never types into the box by accident."""
+        filt = self.query_one("#filter", Input)
+        filt.can_focus = True
+        filt.focus()
+
+    def action_blur_filter(self) -> None:
+        """Esc: leave filter, give keys back to hub (f/b/a work again)."""
+        filt = self.query_one("#filter", Input)
+        if self.focused is filt or filt.has_focus:
+            filt.can_focus = False
+            self.query_one("#project-list", OptionList).focus()
+            return
+        # if not in filter, esc clears filter text
+        if filt.value:
+            filt.value = ""
+            self._load_projects("")
+        self.query_one("#project-list", OptionList).focus()
 
     def action_refresh(self) -> None:
         self._agent_info = detect_agents()
