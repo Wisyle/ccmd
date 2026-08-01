@@ -8,9 +8,8 @@ from textual.containers import Grid, Vertical
 from textual.screen import Screen
 from textual.widgets import Footer, Static
 
-from ccmd.core.agents import all_agents, detect_agents
+from ccmd.core.agents import detect_agents
 from ccmd.core.projects import Project
-from ccmd.tui.ascii import agent_tile
 
 
 class AgentScreen(Screen[str | None]):
@@ -20,26 +19,43 @@ class AgentScreen(Screen[str | None]):
         Binding("right", "right", show=False),
         Binding("up", "up", show=False),
         Binding("down", "down", show=False),
-        Binding("enter", "select", "Launch", show=True),
+        Binding("enter", "select", "Select", show=True),
         Binding("i", "hint", "Install hint", show=True),
     ]
 
-    def __init__(self, project: Project | None = None) -> None:
+    def __init__(
+        self,
+        project: Project | None = None,
+        mode: str = "launch",  # launch | set
+    ) -> None:
         super().__init__()
         self.project = project
+        self.mode = mode
         self._agents = detect_agents()
         self._index = 0
+        # prefer project's default
+        if project:
+            for i, a in enumerate(self._agents):
+                if a["id"] == project.default_agent:
+                    self._index = i
+                    break
 
     def compose(self) -> ComposeResult:
-        title = "choose agent"
+        if self.mode == "set":
+            title = "set default agent"
+        else:
+            title = "choose agent · saves default · launches"
         if self.project:
-            title = f"agent for [bold #00ffc8]{self.project.name}[/]"
+            title = f"{title}  ·  [bold #00ffc8]{self.project.name}[/]"
         yield Static(title, id="subtitle")
         yield Static("", id="spinner-line")
         with Vertical():
             yield Grid(id="agent-grid")
             yield Static("", id="agent-detail")
-        yield Static("←→↑↓ move · ↵ select · i install hint · esc back", id="footer-bar")
+        yield Static(
+            "←→↑↓ move · ↵ select · i install hint · esc back",
+            id="footer-bar",
+        )
         yield Footer()
 
     def on_mount(self) -> None:
@@ -47,7 +63,8 @@ class AgentScreen(Screen[str | None]):
         self._render_grid()
         installed = sum(1 for a in self._agents if a["installed"])
         self.query_one("#spinner-line", Static).update(
-            f"✦  {installed}/{len(self._agents)} agents ready"
+            f"✦  {installed}/{len(self._agents)} agents ready  ·  "
+            f"not just claude — pick any"
         )
 
     def _render_grid(self) -> None:
@@ -59,8 +76,9 @@ class AgentScreen(Screen[str | None]):
             if i == self._index:
                 classes.append("-focus")
             color = a["color"] if a["installed"] else "#6a6a80"
+            num = i + 1
             body = (
-                f"[{color}]{a['logo']}[/]\n"
+                f"[#6a6a80]{num}[/] [{color}]{a['logo']}[/]\n"
                 f"[bold]{a['name']}[/]\n"
                 f"{'ready' if a['installed'] else 'not found'}"
             )
@@ -69,12 +87,14 @@ class AgentScreen(Screen[str | None]):
 
     def _update_detail(self) -> None:
         a = self._agents[self._index]
+        action = "set default only" if self.mode == "set" else "set default + launch"
         lines = [
             f"[bold]{a['logo']} {a['name']}[/]  ({a['id']})",
             f"status   {'installed' if a['installed'] else 'missing'}",
             f"version  {a['version'] or '—'}",
             f"binary   {a['binary'] or '—'}",
             f"hint     {a['hint']}",
+            f"action   {action}",
         ]
         self.query_one("#agent-detail", Static).update("\n".join(lines))
 
@@ -98,7 +118,9 @@ class AgentScreen(Screen[str | None]):
     def action_select(self) -> None:
         a = self._agents[self._index]
         if not a["installed"] and a["id"] != "chatgpt":
-            self.notify(f"{a['name']} not installed — press i for hint", severity="warning")
+            self.notify(
+                f"{a['name']} not installed — press i for hint", severity="warning"
+            )
             return
         self.dismiss(a["id"])
 

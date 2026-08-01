@@ -15,8 +15,20 @@ Screen {
 
 #subtitle {
     color: #c84bff;
+    padding: 0 2 0 2;
+    height: 1;
+}
+
+#agent-bar {
+    color: #e8e8f0;
     padding: 0 2 1 2;
     height: 1;
+}
+
+#path-bar {
+    color: #e8e8f0;
+    padding: 0 2 1 2;
+    height: auto;
 }
 
 #filter {

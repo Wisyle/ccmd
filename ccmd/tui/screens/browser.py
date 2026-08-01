@@ -13,8 +13,11 @@ from textual.widgets import Footer, Input, OptionList, Static
 from textual.widgets.option_list import Option
 
 from ccmd.config.schema import load_config
+from ccmd.core.agents import all_agents, get_agent
 from ccmd.core.fs import default_browse_roots, is_projectish, list_dir_entries
 from ccmd.core.projects import ProjectRegistry
+
+_AGENT_IDS = [a.id for a in all_agents()]
 
 
 class DirBrowserScreen(Screen[bool | None]):
@@ -41,6 +44,15 @@ class DirBrowserScreen(Screen[bool | None]):
         Binding("slash", "focus_filter", "Filter", show=False),
         Binding("/", "focus_filter", "Filter", show=True),
         Binding("g", "go_path", "Go path", show=True),
+        Binding("left_square_bracket", "agent_prev", "Agent−", show=True),
+        Binding("right_square_bracket", "agent_next", "Agent+", show=True),
+        Binding("1", "agent_n_1", show=False),
+        Binding("2", "agent_n_2", show=False),
+        Binding("3", "agent_n_3", show=False),
+        Binding("4", "agent_n_4", show=False),
+        Binding("5", "agent_n_5", show=False),
+        Binding("6", "agent_n_6", show=False),
+        Binding("7", "agent_n_7", show=False),
     ]
 
     def __init__(self, start: Path | None = None) -> None:
@@ -68,7 +80,7 @@ class DirBrowserScreen(Screen[bool | None]):
                 yield Static("preview", classes="panel-title")
                 yield Static("", id="preview")
         yield Static(
-            "↵ open · ⌫ up · s select as project · r roots · g go path · . hidden · esc back",
+            "↵ open · ⌫ up · s add project · ]/[ agent · 1-7 agent · r roots · g path · esc",
             id="footer-bar",
         )
         yield Footer()
@@ -83,8 +95,11 @@ class DirBrowserScreen(Screen[bool | None]):
         bar = self.query_one("#path-bar", Static)
         mark = " · project?" if is_projectish(self._cwd) else ""
         hidden = " · hidden" if self._show_hidden else ""
+        ag = get_agent(self._agent)
+        ag_s = f"{ag.ascii_logo} {self._agent}" if ag else self._agent
         bar.update(
-            f"[bold #00ffc8]{self._cwd}[/]{mark}{hidden}"
+            f"[bold #00ffc8]{self._cwd}[/]{mark}{hidden}  ·  "
+            f"agent [bold #c84bff]{ag_s}[/]"
             + (f"  [#6a6a80]{extra}[/]" if extra else "")
         )
 
@@ -248,15 +263,57 @@ class DirBrowserScreen(Screen[bool | None]):
             self.query_one("#filter", Input).value = ""
             self._render_list()
 
+    def action_agent_prev(self) -> None:
+        try:
+            i = _AGENT_IDS.index(self._agent)
+        except ValueError:
+            i = 0
+        self._agent = _AGENT_IDS[(i - 1) % len(_AGENT_IDS)]
+        self._set_path_bar()
+        self.notify(f"agent → {self._agent}", severity="information", timeout=1)
+
+    def action_agent_next(self) -> None:
+        try:
+            i = _AGENT_IDS.index(self._agent)
+        except ValueError:
+            i = 0
+        self._agent = _AGENT_IDS[(i + 1) % len(_AGENT_IDS)]
+        self._set_path_bar()
+        self.notify(f"agent → {self._agent}", severity="information", timeout=1)
+
+    def _agent_n(self, n: int) -> None:
+        if 1 <= n <= len(_AGENT_IDS):
+            self._agent = _AGENT_IDS[n - 1]
+            self._set_path_bar()
+            self.notify(f"agent → {self._agent}", severity="information", timeout=1)
+
+    def action_agent_n_1(self) -> None:
+        self._agent_n(1)
+
+    def action_agent_n_2(self) -> None:
+        self._agent_n(2)
+
+    def action_agent_n_3(self) -> None:
+        self._agent_n(3)
+
+    def action_agent_n_4(self) -> None:
+        self._agent_n(4)
+
+    def action_agent_n_5(self) -> None:
+        self._agent_n(5)
+
+    def action_agent_n_6(self) -> None:
+        self._agent_n(6)
+
+    def action_agent_n_7(self) -> None:
+        self._agent_n(7)
+
     def action_select(self) -> None:
         """Register highlighted path, or current directory if nothing useful."""
         path = self._selected_path()
         # if on .. or empty, use cwd
         if path is None or (path == self._cwd.parent and self._mode == "browse"):
             path = self._cwd
-        if self._mode == "roots" and path:
-            # selecting a root without entering — still ok as project
-            pass
         if not path or not path.is_dir():
             self.notify("not a directory", severity="error")
             return
@@ -269,7 +326,12 @@ class DirBrowserScreen(Screen[bool | None]):
         reg = ProjectRegistry()
         existing = reg.find_by_path(resolved)
         if existing:
-            self.notify(f"already registered as {existing.id}", severity="warning")
+            existing.default_agent = self._agent
+            reg.save(existing)
+            self.notify(
+                f"already had {existing.id} — default agent → {self._agent}",
+                severity="information",
+            )
             self.dismiss(True)
             return
 
@@ -280,7 +342,10 @@ class DirBrowserScreen(Screen[bool | None]):
             default_agent=self._agent,
             notes="added via browser",
         )
-        self.notify(f"added {p.id} → {resolved}", severity="information")
+        self.notify(
+            f"added {p.id} · agent {self._agent} → {resolved}",
+            severity="information",
+        )
         self.dismiss(True)
 
     def action_go_path(self) -> None:
